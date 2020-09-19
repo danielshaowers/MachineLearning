@@ -61,7 +61,7 @@ def find_indices(list, condition):
 
 """
 	ID3 pseudo-code (from Machine Learning textbook)
-	------------------------------------------------
+	------------------------------------------------d
 	1. Create a root node for the tree
 	2. If all observations in the dataset are of the same class, return the 
 		single-node tree with that class label
