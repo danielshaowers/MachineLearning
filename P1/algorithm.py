@@ -5,6 +5,8 @@ from mldata import Feature
 
 
 # TODO Develop data structure for tree: linked list?
+import P1.metrics
+
 
 def id3(dataset: ObservationSet, target: Feature, features: Iterable[Feature]):
 	"""
@@ -18,6 +20,14 @@ def id3(dataset: ObservationSet, target: Feature, features: Iterable[Feature]):
 	Returns:
 		A decision tree that classifies the given observations.
 	"""
+	pure_node = checkPure(target.to_float)
+	for feat in features:
+			if feat.Type == Feature.Type.NOMINAL:
+				ig = P1.gain_ratio
+			elif feat.Type == Feature.Type.CONTINUOUS #consider every boolean test
+
+
+	#root = Node(bestF)
 
 	"""
 	ID3 pseudo-code (from Machine Learning textbook)
@@ -44,3 +54,5 @@ def id3(dataset: ObservationSet, target: Feature, features: Iterable[Feature]):
 				id3(features_fi, target, features - {F})
 	Return root
 	"""
+def checkPure(iterator):
+   return len(set(iterator)) <= 1
