@@ -1,21 +1,30 @@
-'https://medium.com/dev-genius/python-for-experienced-programmers-a2ee334ce62f'
-# let's use dictionaries for our data
+import functools
+import operator
 import random
 from collections import defaultdict
 from typing import List
 
-from .observation import ObservationSet
+from .observation import Observation, ObservationSet
+
+"""
+1. get_folds
+2. Create n train-test splits
+3. Train and evaluate with each split, recording performance of each
+"""
 
 
-def find_indices(list, condition):
-	return [i for i, elem in enumerate(list) if condition(elem)]
-
-
-def cv(training: ObservationSet, testing: ObservationSet):
+def cross_validate():
 	pass
 
 
-def get_folds(dataset: ObservationSet, n_folds: int) -> List[List[int]]:
+def get_train_test_split(folds: List[List[Observation]], test_fold_ind: int):
+	train_folds = [folds[i] for i in range(len(folds)) if i != test_fold_ind]
+	train_set = ObservationSet(functools.reduce(operator.add, train_folds))
+	test_set = ObservationSet(folds[test_fold_ind])
+	return train_set, test_set
+
+
+def get_folds(dataset: ObservationSet, n_folds: int) -> List[List[Observation]]:
 	# Handles improper n_folds value by defaulting to 1 fold
 	num_folds = max(1, n_folds)
 	# Key = fold index, value = observations in the fold
