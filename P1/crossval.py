@@ -4,7 +4,7 @@ import random
 from collections import defaultdict
 from typing import List
 
-from .observation import Observation, ObservationSet
+from ..observation import Observation, ObservationSet
 
 """
 1. get_folds
