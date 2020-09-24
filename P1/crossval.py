@@ -1,28 +1,54 @@
 'https://medium.com/dev-genius/python-for-experienced-programmers-a2ee334ce62f'
 # let's use dictionaries for our data
 import random
-from typing import Any, Iterable
+from collections import defaultdict
+from typing import List
+
+from .observation import ObservationSet
 
 
 def find_indices(list, condition):
 	return [i for i, elem in enumerate(list) if condition(elem)]
 
 
-def cross_val(labels: Iterable[Any], folds: int):
-	pos_lab = find_indices(labels, lambda x: x > 0)
-	neg_lab = find_indices(labels, lambda x: x <= 0)
-	pos_per_fold, pos_remainder = divmod(len(pos_lab), folds)
-	neg_per_fold, neg_remainder = divmod(len(neg_lab), folds)
+def cv(training: ObservationSet, testing: ObservationSet):
+	pass
 
-	random.shuffle(pos_lab)
-	random.shuffle(neg_lab)
-	data = []
-	for x in range(folds):
-		pos_count = pos_per_fold + min(1, pos_remainder)
-		neg_count = neg_per_fold + min(1, neg_remainder)
-		data[x] = [pos_lab[:pos_count] + neg_lab[:neg_count]]
-		pos_remainder = max(0, pos_remainder - 1)
-		neg_remainder = max(0, neg_remainder - 1)
-		del pos_lab[:pos_count]
-		del neg_lab[:neg_count]
-	return data
+
+def get_folds(dataset: ObservationSet, n_folds: int) -> List[List[int]]:
+	# Handles improper n_folds value by defaulting to 1 fold
+	num_folds = max(1, n_folds)
+	# Key = fold index, value = observations in the fold
+	folds = defaultdict(list)
+	# Get all unique labels in the dataset
+	labels = set(o.label for o in dataset)
+	for label in labels:
+		# Get only the observations that have a certain label
+		observations = [o for o in dataset if o.label == label]
+		random.shuffle(observations)
+		# Add each observation a fold
+		for i, observation in enumerate(observations):
+			i_fold = i % num_folds
+			folds[i_fold].append(observation)
+	return list(folds.values())
+
+# def cross_val(labels: Iterable, folds: int):
+# 	pos_lab = find_indices(labels, lambda x: x > 0)
+# 	neg_lab = find_indices(labels, lambda x: x <= 0)
+# 	pos_per_fold, pos_remainder = divmod(len(pos_lab), folds)
+# 	neg_per_fold, neg_remainder = divmod(len(neg_lab), folds)
+#
+# 	pos_count = pos_per_fold + min(1, pos_remainder)
+# 	neg_count = neg_per_fold + min(1, neg_remainder)
+# 	pos_remainder = max(0, pos_remainder - 1)
+# 	neg_remainder = max(0, neg_remainder - 1)
+#
+# 	random.shuffle(pos_lab)
+# 	random.shuffle(neg_lab)
+# 	data = []
+#
+# 	for x in range(folds):
+# 		data[x] = [pos_lab[:pos_count] + neg_lab[:neg_count]]
+# 		del pos_lab[:pos_count]
+# 		del neg_lab[:neg_count]
+# 	return data

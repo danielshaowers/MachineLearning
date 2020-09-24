@@ -1,6 +1,8 @@
+from typing import Tuple
+
 from numpy import array
 
-from mldata import Example, ExampleSet
+from ..mldata import Example, ExampleSet
 
 
 class Observation(Example):
@@ -17,8 +19,8 @@ class Observation(Example):
 class ObservationSet(ExampleSet):
 
 	@property
-	def observations(self):
-		return self.examples
+	def observations(self) -> Tuple[Observation]:
+		return tuple(Observation(e) for e in self.examples)
 
 	def to_numpy_array(self, mapper=None):
 		return array(self.to_float(mapper))
