@@ -1,12 +1,13 @@
-from collections import deque
+from abc import ABC, abstractmethod
+from collections import Counter, deque, namedtuple
 
 import numpy as np
 
 from .Node import Node
 # TODO Fix this -- not good coding practice
 from .metrics import gain_ratio, information_gain
-from ..mldata import Feature
-from ..observation import ObservationSet
+from .mldata import Feature
+from .observation import Observation, ObservationSet
 
 
 # for continuous and nominal, we don't need to remove them after we come up
@@ -23,7 +24,23 @@ def is_pure(dataset: ObservationSet) -> bool:
 	return len(set(get_labels(dataset))) == 1
 
 
-class ID3:
+def get_majority_label(dataset: ObservationSet):
+	label_counter = Counter([o.label for o in dataset])
+	return label_counter.most_common()
+
+
+class Model(ABC):
+
+	@abstractmethod
+	def train(self, data: ObservationSet):
+		pass
+
+	@abstractmethod
+	def predict(self, observation: Observation):
+		pass
+
+
+class ID3(Model):
 	def __init__(self, max_depth: int = None):
 		self.max_depth = max_depth
 		if max_depth < 1:
@@ -35,13 +52,16 @@ class ID3:
 	def train(self, dataset: ObservationSet):
 		return self.id3(dataset, Node())
 
+	def predict(self, observation: Observation):
+		pass
+
 	# TODO How do we keep track of the features we have tested? Per step 3 of
 	#  the algorithm pseudo code, if we have tested all of our features,
 	#  then we should just return the majority class. In our case,
 	#  if we implicitly know what has been tested (vacuously true if the
 	#  feature is not in the partitioned dataset), then we'll only get the
 	#  case where we get a pure node?
-	def id3(self, dataset: ObservationSet, parent: Node):
+	def id3(self, dataset: ObservationSet, parent: Node, depth: int = 0):
 		"""
 		Args:
 			dataset: Collection of training examples.
@@ -76,49 +96,56 @@ class ID3:
 
 		# TODO Other stopping criteria: at max_depth, no more features/tests
 		if is_pure(dataset):
-			# TODO Assign this sub tree to be left or right child of parent
 			return Node(data=get_labels(dataset)[0], parent=parent)
 
-# 4.1 Get best feature and make it the root of the subtree
+		# 4.1 Get best feature and make it the root of the subtree
+		def get_best_feature(dataset: ObservationSet):
+			features = dataset.to_features()
+			for feat in features:
 
-# 4.2 Make the best feature the root of the subtree
+				if feat.Type == Feature.Type.NOMINAL:
+					if igflag:
+						ig = information_gain()
+					else:
+						ig = gain_ratio()
+				else:
+					partition = get_best_partition(feat, target, igflag)
 
-# Alternative steps to the pseudo code above
-# 4.3 Find the best feature-value test for the given feature (
-# 		according to the split criteria)
+				feat_array = np.array(best_feat)
+				lChild_idx = np.argwhere(feat_array <= partition)
+				rChild_idx = numpy.argwhere(feat_array > partition)
+				leftChild = parent_node.left(Node(parent_node, partition))
+				rightChild = parent_node.right(Node(parent_node, partition))
 
-# 4.4 Partition the dataset based on this test
+	# 4.2 Make the best feature the root of the subtree
 
-# 4.5 If one partition is empty, assign it a leaf node that is the
-# 		label based on the current dataset (majority class)
+	# Alternative steps to the pseudo code above
+	# 4.3 Find the best feature-value test for the given feature (
+	# 		according to the split criteria)
 
-# 4.5 For the non empty partition, recurse
+	# 4.4 Partition the dataset based on this test
 
+	# 4.5 If one partition is empty, assign it a leaf node that is the
+	# 		label based on the current dataset (majority class)
 
-def get_best_feature(features):
-	for feat in features:  # find the best feature
-		# TODO Don't we want to evaluate info_gain or gain_ratio regardless
-		#  of feature type?
-		if feat.Type == Feature.Type.NOMINAL:
-			if igflag:
-				ig = information_gain()
-			else:
-				ig = gain_ratio()
-		else:
-			partition = get_best_partition(feat, target, igflag)
-
-		feat_array = np.array(best_feat)
-		lChild_idx = np.argwhere(feat_array <= partition)
-		rChild_idx = numpy.argwhere(feat_array > partition)
-		leftChild = parent_node.left(Node(parent_node, partition))
-		rightChild = parent_node.right(Node(parent_node, partition))
+	# 4.5 For the non empty partition, recurse
 
 	# root = Node(bestF)a
 
 	# find every time the class label changes
-	def get_best_partition(feat, labels, use_ig: bool):
-		#	both = [(example, label)];
-		#	sort(both, key=lambda k:k[0]) #this sorts by col 1
+	def get_best_partition(self, feature: Feature, label: Feature,
+						   use_ig: bool):
+		ValueLabelPair = namedtuple('ValueLabelPair', ['value', 'label'])
+		feature_label_pairs = [
+			ValueLabelPair(v, l) for v, l in zip(feature.values, label.values)
+		]
+		feature_label_pairs.sort(key=lambda p: p.value)
+		splits = []
+		prev = feature_label_pairs[0]
+		for pair in feature_label_pairs:
+			if pair.label != prev.label:
+				splits.append(pair.value)
+
 		splits = deque()
 		labelsN = np.array(labels)
 		featN = np.array(feat)
