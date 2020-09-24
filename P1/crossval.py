@@ -4,7 +4,7 @@ import random
 from collections import defaultdict
 from typing import List
 
-from ..observation import Observation, ObservationSet
+from P1.observation import Observation, ObservationSet
 
 """
 1. get_folds
@@ -13,8 +13,6 @@ from ..observation import Observation, ObservationSet
 """
 
 
-def cross_validate():
-	pass
 
 
 def get_train_test_split(folds: List[List[Observation]], test_fold_ind: int):

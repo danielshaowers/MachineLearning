@@ -2,7 +2,7 @@ from typing import Tuple
 
 from numpy import array
 
-from .mldata import Example, ExampleSet
+from P1.mldata import Example, ExampleSet
 
 
 class Observation(Example):

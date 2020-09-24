@@ -1,7 +1,5 @@
-from typing import Iterable
-
-from observation import ObservationSet
-from mldata import Feature
+from P1.observation import ObservationSet
+from P1.mldata import Feature
 from collections import deque
 import numpy
 
@@ -87,6 +85,8 @@ def get_best_partition(feat, labels, use_ig):  # find every time the class label
 def find_indices(list, condition):
     return [i for i, elem in enumerate(list) if condition(elem)]
 
+#return predicted labels
+def predict(test_data: ObservationSet):
 
 """
 	ID3 pseudo-code (from Machine Learning textbook)
