@@ -34,7 +34,11 @@ def get_labels(data: ExampleSet, index: int = None):
 
 def get_features_info(data: ExampleSet, index: int = None):
 	if index is None:
-		info = tuple(data.schema[1:])
+		info = tuple(data.schema[1:-1])
 	else:
 		info = data.schema[index]
 	return info
+
+
+def get_label_info(data: ExampleSet):
+	return data.schema[-1]
