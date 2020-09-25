@@ -12,9 +12,6 @@ from P1.observation import Observation, ObservationSet
 3. Train and evaluate with each split, recording performance of each
 """
 
-
-
-
 def get_train_test_split(folds: List[List[Observation]], test_fold_ind: int):
 	train_folds = [folds[i] for i in range(len(folds)) if i != test_fold_ind]
 	train_set = ObservationSet(functools.reduce(operator.add, train_folds))
