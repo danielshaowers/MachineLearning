@@ -20,8 +20,15 @@ def get_features(data: ExampleSet, example_index: int = None) -> Tuple:
 	return features
 
 
-def get_feature_examples(data: ExampleSet, index: int) -> Tuple:
-	return tuple(example[index] for example in data)
+def get_feature_examples(data: ExampleSet, index: int = None) -> Tuple:
+	if index is None:
+		examples = tuple(
+			tuple(data[e][f] for e in range(len(data)))
+			for f in range(1, data.schema - 1)
+		)
+	else:
+		examples = tuple(example[index] for example in data)
+	return examples
 
 
 def get_labels(data: ExampleSet, index: int = None):
