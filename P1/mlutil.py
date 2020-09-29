@@ -1,13 +1,15 @@
 import functools
 import operator
 from collections import Counter
-from typing import Iterable, Tuple
+from typing import Collection, Iterable, Tuple
 
-from mldata import ExampleSet, Feature
+import mldata
 
 
 # TODO Account for continuous variables
-def create_all_split_tests(data: ExampleSet, drop_single_tests=True) -> Tuple:
+def create_all_split_tests(
+		data: mldata.ExampleSet,
+		drop_single_tests: bool = True) -> Tuple:
 	types = [f.type for f in get_features_info(data)]
 	examples = get_feature_examples(data)
 	tests = tuple(create_split_tests(e, t) for e, t in zip(examples, types))
@@ -16,25 +18,28 @@ def create_all_split_tests(data: ExampleSet, drop_single_tests=True) -> Tuple:
 	return tests
 
 
-def create_split_tests(values: Iterable, feature_type: Feature.Type) -> Tuple:
-	if feature_type in {Feature.Type.NOMINAL, Feature.Type.BINARY}:
+def create_split_tests(
+		values: Iterable,
+		feature_type: mldata.Feature.Type) -> Tuple:
+	if feature_type in {
+		mldata.Feature.Type.NOMINAL, mldata.Feature.Type.BINARY}:
 		tests = tuple(functools.partial(operator.eq, v) for v in set(values))
-	elif feature_type == Feature.Type.CONTINUOUS:
+	elif feature_type == mldata.Feature.Type.CONTINUOUS:
 		tests = tuple(functools.partial(operator.le, v) for v in values)
 	else:
 		tests = tuple()
 	return tests
 
 
-def is_homogeneous(data: ExampleSet) -> bool:
+def is_homogeneous(data: mldata.ExampleSet) -> bool:
 	return len(set(get_labels(data))) == 1
 
 
-def get_majority_label(data: ExampleSet):
+def get_majority_label(data: mldata.ExampleSet):
 	return Counter(get_labels(data)).most_common()
 
 
-def get_features(data: ExampleSet, example_index: int = None) -> Tuple:
+def get_features(data: mldata.ExampleSet, example_index: int = None) -> Tuple:
 	if example_index is None:
 		features = tuple(tuple(example[1:-1] for example in data))
 	else:
@@ -42,18 +47,17 @@ def get_features(data: ExampleSet, example_index: int = None) -> Tuple:
 	return features
 
 
-def get_feature_examples(data: ExampleSet, index: int = None) -> Tuple:
+def get_feature_examples(data: mldata.ExampleSet, index: int = None) -> Tuple:
 	if index is None:
 		examples = tuple(
 			tuple(data[e][f] for e in range(len(data)))
-			for f in range(1, len(data.schema) - 1)
-		)
+			for f in range(1, len(data.schema) - 1))
 	else:
 		examples = tuple(example[index] for example in data)
 	return examples
 
 
-def get_labels(data: ExampleSet, index: int = None):
+def get_labels(data: mldata.ExampleSet, index: int = None):
 	if index is None:
 		labels = tuple(example[-1] for example in data)
 	else:
@@ -61,7 +65,7 @@ def get_labels(data: ExampleSet, index: int = None):
 	return labels
 
 
-def get_features_info(data: ExampleSet, index: int = None):
+def get_features_info(data: mldata.ExampleSet, index: int = None):
 	if index is None:
 		info = tuple(data.schema[1:-1])
 	else:
@@ -69,5 +73,5 @@ def get_features_info(data: ExampleSet, index: int = None):
 	return info
 
 
-def get_label_info(data: ExampleSet):
+def get_label_info(data: mldata.ExampleSet) -> Collection:
 	return data.schema[-1]
