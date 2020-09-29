@@ -1,8 +1,13 @@
-from P1 import crossval, algorithm
+#from src import algorithm, crossval
 import statistics
 import argparse
-def main(path: str, skip_cv: bool, max_depth: int, use_info_gain: bool) -> None:
-	#in the real thing there will be a command line input and we need to parse the arguments that way
+from sys import argv
+#path: str, skip_cv: bool, max_depth: int, use_info_gain: bool
+def main() -> None:
+
+	temp, path, skip_cv, max_depth, use_info_gain = argv
+	print('accepted arguments ' + path + skip_cv + max_depth + use_info_gain)
+
 	"""
 	Args:
 		path: Path to the data. If this is “/a/b/someproblem” then you
@@ -37,9 +42,10 @@ def main(path: str, skip_cv: bool, max_depth: int, use_info_gain: bool) -> None:
 	else:
 		accuracy, plabels = train_test(data, data, use_info_gain, max_depth)
 
-
-
-def train_test(train, test, use_info_gain, max_depth)
+#research idea: at each step of the decision tree, instead of connsidering the full dataset, create n subsets. for each of these subsets, add on a random, balanced number of examples from other subsets.
+#find the feature partition that has the maximum average information gain
+#this addresses the variance withinn decision trees by considering the feature most resistant to variance while  still ensuring that all the data is used at least once
+def train_test(train, test, use_info_gain, max_depth):
 	train_labels = set(o.label for o in train)
 	test_labels = set(o.label for o in test)
 	dtree = algorithm.id3(train, train_labels, use_info_gain, max_depth)
@@ -51,3 +57,6 @@ def train_test(train, test, use_info_gain, max_depth)
 			match = match + 1
 	accuracy = match / len(plabels)
 	return plabels, accuracy
+
+if __name__ == "__main__":
+    main()
