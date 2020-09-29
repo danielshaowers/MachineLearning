@@ -1,7 +1,29 @@
+import functools
+import operator
 from collections import Counter
-from typing import Tuple
+from typing import Iterable, Tuple
 
-from mldata import ExampleSet
+from mldata import ExampleSet, Feature
+
+
+# TODO Account for continuous variables
+def create_all_split_tests(data: ExampleSet, drop_single_tests=True) -> Tuple:
+	types = [f.type for f in get_features_info(data)]
+	examples = get_feature_examples(data)
+	tests = tuple(create_split_tests(e, t) for e, t in zip(examples, types))
+	if drop_single_tests:
+		tests = tuple(t for t in tests if len(t) > 1)
+	return tests
+
+
+def create_split_tests(values: Iterable, feature_type: Feature.Type) -> Tuple:
+	if feature_type in {Feature.Type.NOMINAL, Feature.Type.BINARY}:
+		tests = tuple(functools.partial(operator.eq, v) for v in set(values))
+	elif feature_type == Feature.Type.CONTINUOUS:
+		tests = tuple(functools.partial(operator.le, v) for v in values)
+	else:
+		tests = tuple()
+	return tests
 
 
 def is_homogeneous(data: ExampleSet) -> bool:
@@ -24,7 +46,7 @@ def get_feature_examples(data: ExampleSet, index: int = None) -> Tuple:
 	if index is None:
 		examples = tuple(
 			tuple(data[e][f] for e in range(len(data)))
-			for f in range(1, data.schema - 1)
+			for f in range(1, len(data.schema) - 1)
 		)
 	else:
 		examples = tuple(example[index] for example in data)
