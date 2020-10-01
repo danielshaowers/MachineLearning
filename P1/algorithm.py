@@ -43,7 +43,7 @@ class ID3(Model):
 	def __init__(self, max_depth: int = 1, split_function: Callable = None):
 		self.max_depth = max_depth
 		if split_function is None:
-			self.split_function = metrics.info_gain #we assign the function
+			self.split_function = metrics.info_gain  # we assign the function
 		else:
 			self.split_function = split_function
 		self.model_metrics = dict()
@@ -73,8 +73,8 @@ class ID3(Model):
 	def _predict_example(self, example: mldata.ExampleSet, root: node.Node):
 		if root.is_leaf():
 			return root.data
-		index = mlutil.get_features_info(example).index(root.data.feature)
-		feature_value = mlutil.get_features(example)[index]
+		index = mlutil.get_feature_index(example, root.data.feature)
+		feature_value = mlutil.get_features(example, index)
 		result: bool = root.data.evaluate(feature_value)
 		if result:
 			predicted = self._predict_example(example, root.left)
@@ -120,9 +120,17 @@ class ID3(Model):
 		features = mlutil.get_feature_examples(data)
 		# TODO Would be more efficient to calculate once and pass down
 		split_tests = mlutil.create_all_split_tests(data)
+		label_tests = mlutil.create_split_tests(
+			labels, mldata.Feature.Type.BINARY)
 		split_values = [
 			# TODO Update parameters
-			[self.split_function(labels, f, t) for t in split_tests[i]] #todo: add feature type in 4th argument. or something. types = [f.type for f in get_features_info(data)]
+			# todo: add feature type in 4th argument. or something. types = [
+			#  f.type for f in get_features_info(data)]
+			# self.split_function(labels, label_test, feature_vals,
+			# feature_tests
+			[
+				self.split_function(labels, label_tests, f, t) for t in
+				split_tests[i]]
 			for i, f in enumerate(features)]
 		i_max_feature = int(np.argmax([max(v) for v in split_values]))
 		i_max_test = np.argmax(split_values[i_max_feature])
@@ -135,7 +143,7 @@ class ID3(Model):
 			data: mldata.ExampleSet,
 			feature: mldata.Feature,
 			test: Callable) -> Tuple:
-		index = mlutil.get_features_info(data).index(feature)
+		index = mlutil.get_feature_index(data, feature)
 		left_data = mldata.ExampleSet([e for e in data if test(e[index])])
 		right_data = mldata.ExampleSet([e for e in data if not test(e[index])])
 		return left_data, right_data
