@@ -1,5 +1,5 @@
+import enum
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import Callable, NoReturn, Tuple
 
 import numpy as np
@@ -35,7 +35,7 @@ class ID3(Model):
 
 	"""
 
-	class Metrics(Enum):
+	class Metrics(str, enum.Enum):
 		FIRST_FEATURE = 'first_feature'
 		MAX_DEPTH = 'max_depth'
 		TREE_SIZE = 'tree_size'
@@ -50,7 +50,7 @@ class ID3(Model):
 		self.model = None
 		super(ID3, self).__init__()
 
-	def train(self, data: mldata.ExampleSet) -> NoReturn:
+	def train(self, data: mldata.ExampleSet):
 		self.model = self.id3(data, node.Node())
 		self._get_model_metrics()
 		return self.model, self.model_metrics

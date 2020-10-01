@@ -1,27 +1,15 @@
-# from src import algorithm, crossval
-import statistics
 from sys import argv
+from typing import NoReturn
 
 import algorithm
 import crossval
 import metrics
 import mldata
-
-
 # path: str, skip_cv: bool, max_depth: int, use_info_gain: bool
 import mlutil
 
 
-def main() -> None:
-	temp, path, skip_cv, max_depth, use_info_gain = argv
-
-	print('accepted arguments ' + path + skip_cv + max_depth + use_info_gain)
-	max_depth = int(max_depth)
-	skip_cv = int(skip_cv)
-	use_info_gain = int(use_info_gain)
-#def main(path: str, skip_cv: bool, max_depth: int, use_info_gain: bool) -> None:
-	# in the real thing there will be a command line input and we need to
-	# parse the arguments that way
+def main() -> NoReturn:
 	"""
 	Args:
 		path: Path to the data. If this is “/a/b/someproblem” then you
@@ -39,62 +27,80 @@ def main() -> None:
 
 	Returns:
 		None
-
-	Raises:
 	"""
 
-	data = mldata.parse_c45(path, "C:/users/danie/PycharmProjects/") #this input might have to be fixed? i couldn't get it work as an absolute path
+	temp, path, skip_cv, max_depth, use_info_gain = argv
+	print('accepted arguments ' + path + skip_cv + max_depth + use_info_gain)
+	max_depth = int(max_depth)
+	skip_cv = bool(skip_cv)
+	use_info_gain = bool(use_info_gain)
+	# def main(path: str, skip_cv: bool, max_depth: int, use_info_gain: bool)
+	# -> None:
+	# in the real thing there will be a command line input and we need to
+	# parse the arguments that way
 
-	if use_info_gain:
-		split_criteria = metrics.info_gain
-	else:
-		split_criteria = metrics.gain_ratio
-	learner = algorithm.ID3(max_depth=max_depth, split_function=split_criteria) #initialize the tests, but don't do any training yet
+	data = mldata.parse_c45(path, "C:/users/danie/PycharmProjects/")  # this
+	# input might have to be fixed? i couldn't get it work as an absolute path
+
+	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
+
+	# initialize the tests, but don't do any training yet
+	learner = algorithm.ID3(max_depth=max_depth, split_function=split_criteria)
 	# experiment: multiple iterations and use the majority label
 	accuracy = []
-	size = []
+	tree_size = []
 	first_feat = []
 	depth = []
-	if skip_cv == 0:
-		foldNum = 5
-		folds = crossval.get_folds(data, foldNum)
-		for i in range(foldNum):
+	if skip_cv:
+		fold_num = 5
+		folds = crossval.get_folds(data, fold_num)
+		for i in range(fold_num):
 			train, test = crossval.get_train_test_split(folds, i)
-			accuracy[i], plabels, size[i], first_feat[i], depth[i] = train_test(learner, train, test)
-			print("Results of " + i + "th fold: \nAccuracy: " + accuracy[i] + "\nSize: " + size[i] + "\nMaximum Depth:" + depth[i] + "\nFirst Feature: " + first_feat[i])
+			acc, pred, size, root_feat, d = train_test(learner, train, test)
+			accuracy.append(acc)
+			tree_size.append(size)
+			first_feat.append(root_feat)
+			depth.append(d)
+			print(f'Results of {i}th fold')
+			print('-----------------------')
+			print(f'Accuracy: {acc[i]}')
+			print(f'Size: {tree_size[i]}')
+			print(f'Maximum Depth: {depth[i]}')
+			print(f'First Feature: {root_feat[i]}')
 	else:
-		accuracy, plabels = train_test(learner, data, data)
-	print("\nAverage Metrics:\nAccuracy " + sum(accuracy) / len(accuracy) + "\nSize: " + sum(size) / len(size) + "\nMaximum Depth:" + sum(depth) / len(depth))
-
-# research idea: at each step of the decision tree, instead of connsidering
-# the full dataset, create n subsets. for each of these subsets, add on a
-# random, balanced number of examples from other subsets.
-# find the feature partition that has the maximum average information gain
-# this addresses the variance withinn decision trees by considering the
-# feature most resistant to variance while  still ensuring that all the data
-# is used at least once
-#def train_test(train, test, use_info_gain, max_depth):
-#	train_labels = set(o.label for o in train)
-#	test_labels = set(o.label for o in test)
-#	dtree = algorithm.id3(train, train_labels, use_info_gain, max_depth)
-#	plabels, size, first_feat = algorithm.predict(dtree, test)
+		acc, pred, acc, tree_size, depth = train_test(learner, data, data)
+		print('Average Metrics')
+		print('-----------------------')
+		print(f'Accuracy: {sum(acc) / len(acc)}')
+		print(f'Size: {sum(tree_size) / len(tree_size)}')
+		print(f'Maximum Depth: {sum(depth) / len(depth)}')
 
 
-def train_test(learner: algorithm.Model, train_set, test_set):
+"""
+research idea: at each step of the decision tree, instead of considering
+the full dataset, create n subsets. for each of these subsets, add on a
+random, balanced number of examples from other subsets.
+find the feature partition that has the maximum average information gain
+this addresses the variance within decision trees by considering the
+feature most resistant to variance while  still ensuring that all the data
+is used at least once
+"""
+
+
+# TODO What are train_set and test_set?
+def train_test(learner: algorithm.ID3, train_set, test_set):
+	# TODO Not using this?
 	train_labels = mlutil.get_labels(train_set)
 	test_labels = mlutil.get_labels(test_set)
-	dtree, dtree_metrics = learner.train(train_set)
-	plabels = learner.predict(dtree, train_set)
-	match = 0
-	plab = enumerate(plabels)
-	for idx, lab in plab:
-		if lab == test_labels[idx]:
-			match = match + 1
-	accuracy = match / len(plabels)
-	size = dtree_metrics[algorithm.ID3.Metrics.TREE_SIZE]
-	depth = dtree_metrics[algorithm.ID3.Metrics.MAX_DEPTH]
-	first_feat = dtree_metrics[algorithm.ID3.Metrics.FIRST_FEATURE]
-	return plabels, accuracy, size, first_feat, depth
+	learner.train(train_set)
+	# TODO Shouldn't this be test_test?
+	pred_labels = learner.predict(train_set)
+	n_correct = sum(1 for p, t in zip(pred_labels, test_labels) if p == t)
+	accuracy = n_correct / len(pred_labels)
+	size = learner.model_metrics[algorithm.ID3.Metrics.TREE_SIZE]
+	depth = learner.model_metrics[algorithm.ID3.Metrics.MAX_DEPTH]
+	first_feat = learner.model_metrics[algorithm.ID3.Metrics.FIRST_FEATURE]
+	return pred_labels, accuracy, size, first_feat, depth
 
 
 if __name__ == "__main__":
