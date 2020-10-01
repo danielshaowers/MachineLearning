@@ -43,7 +43,7 @@ class ID3(Model):
 	def __init__(self, max_depth: int = 1, split_function: Callable = None):
 		self.max_depth = max_depth
 		if split_function is None:
-			self.split_function = metrics.info_gain
+			self.split_function = metrics.info_gain #we assign the function
 		else:
 			self.split_function = split_function
 		self.model_metrics = dict()
@@ -53,6 +53,7 @@ class ID3(Model):
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
 		self.model = self.id3(data, node.Node())
 		self._get_model_metrics()
+		return self.model, self.model_metrics
 
 	def _get_model_metrics(self) -> NoReturn:
 		if self.model is None:
@@ -122,7 +123,7 @@ class ID3(Model):
 		split_tests = mlutil.create_all_split_tests(data)
 		split_values = [
 			# TODO Update parameters
-			[self.split_function(labels, f, t) for t in split_tests[i]]
+			[self.split_function(labels, f, t) for t in split_tests[i]] #todo: add feature type in 4th argument. or something. types = [f.type for f in get_features_info(data)]
 			for i, f in enumerate(features)]
 		i_max_feature = int(np.argmax([max(v) for v in split_values]))
 		i_max_test = np.argmax(split_values[i_max_feature])
