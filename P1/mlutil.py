@@ -1,7 +1,8 @@
 import functools
 import operator
 from collections import Counter
-from typing import Collection, Iterable, Tuple
+from numbers import Number
+from typing import Any, Callable, Collection, Iterable, Sequence, Tuple
 
 import mldata
 
@@ -18,8 +19,19 @@ def create_all_split_tests(
 	return tests
 
 
-# TODO Remember - only values in which adjacent labels are different should
-#  be considered for partitioning
+def binarize_feature(values: Iterable, test: Callable[[Any], bool]) -> Tuple:
+	return tuple(test(v) for v in values)
+
+
+def find_partition_values(values: Sequence[Number], labels: Sequence):
+	sorted_pairs = sorted(zip(values, labels), key=lambda x: x[0])
+	return set(
+		sum((sorted_pairs[i][0], sorted_pairs[i - 1][0])) / 2
+		for i in range(1, min(len(values), len(labels)))
+		if sorted_pairs[i - 1][1] != sorted_pairs[i][1]
+	)
+
+
 def create_split_tests(
 		values: Iterable,
 		feature_type: mldata.Feature.Type) -> Tuple:
@@ -42,11 +54,11 @@ def get_majority_label(data: mldata.ExampleSet):
 	return Counter(get_labels(data)).most_common()
 
 
-def get_features(data: mldata.ExampleSet, example_index: int = None) -> Tuple:
-	if example_index is None:
+def get_features(data: mldata.ExampleSet, index: int = None) -> Tuple:
+	if index is None:
 		features = tuple(tuple(example[1:-1] for example in data))
 	else:
-		features = tuple(data[example_index][1:-1])
+		features = tuple(data[index][1:-1])
 	return features
 
 
@@ -74,6 +86,10 @@ def get_features_info(data: mldata.ExampleSet, index: int = None):
 	else:
 		info = data.schema[index]
 	return info
+
+
+def get_feature_index(data: mldata.ExampleSet, feature: mldata.Feature) -> int:
+	return data.schema.index(feature)
 
 
 def get_label_info(data: mldata.ExampleSet) -> Collection:

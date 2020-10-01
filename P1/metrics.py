@@ -7,9 +7,6 @@ from typing import Iterable, Union
 
 import numpy as np
 
-import mldata
-import mlutil
-
 
 # shuffle the training data into n blocks with a random number of additional
 # units from other blocks
@@ -68,20 +65,17 @@ def find_indices(list, condition):
 
 def gain_ratio(
 		event: Collection,
-		event_type: mldata.Feature.Type,
+		event_tests: Collection[Callable],
 		given: Collection,
-		given_type: mldata.Feature.Type) -> float:
-	return info_gain(event, event_type, given, given_type) / entropy(given)
+		given_tests: Collection[Callable]) -> float:
+	return info_gain(event, event_tests, given, given_tests) / entropy(given)
 
 
 def info_gain(
 		event: Collection,
-		event_type: mldata.Feature.Type,
+		event_tests: Collection[Callable],
 		given: Collection,
-		given_type: mldata.Feature.Type) -> float:
-	# TODO This is being redundantly calculated
-	event_tests = mlutil.create_split_tests(event, event_type)
-	given_tests = mlutil.create_split_tests(given, given_type)
+		given_tests: Collection[Callable]) -> float:
 	cond_entropy = conditional_entropy(event, event_tests, given, given_tests)
 	return entropy(event) - cond_entropy
 
@@ -96,7 +90,7 @@ def conditional_entropy(
 		for e in event_tests for g in given_tests)
 
 
-def entropy(prob: Union[float, int, np.ndarray], base=2) -> float:
+def entropy(prob: Union[float, int, Collection], base=2) -> float:
 	return - expectation(numpy_log(prob, base), prob)
 
 
@@ -134,17 +128,17 @@ def probability(
 				eg_freq = sum(
 					1 for e, g in joint_events
 					if event_test(e) and given_test(g))
-				pr = (eg_freq / min_len) / pr
+				pr = (eg_freq / min_len) / pr  # Pr(Y, X) / Pr(X) = Pr(Y|X)
 	return pr
 
 
 def expectation(
-		x: Union[float, int, np.ndarray],
-		prob: Union[float, int, np.ndarray]) -> float:
+		x: Union[float, int, Collection],
+		prob: Union[float, int, Collection]) -> float:
 	return sum(np.array(x) * np.array(prob))
 
 
 def numpy_log(
-		x: Union[float, int, np.ndarray],
-		base: Union[float, int, np.ndarray]) -> Union[float, Collection]:
+		x: Union[float, int, Collection],
+		base: Union[float, int, Collection]) -> Union[float, Collection]:
 	return np.log(x) / np.log(base)
