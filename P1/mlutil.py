@@ -18,14 +18,17 @@ def create_all_split_tests(
 	return tests
 
 
+# TODO Remember - only values in which adjacent labels are different should
+#  be considered for partitioning
 def create_split_tests(
 		values: Iterable,
 		feature_type: mldata.Feature.Type) -> Tuple:
+	unique = set(values)
 	if feature_type in {
 		mldata.Feature.Type.NOMINAL, mldata.Feature.Type.BINARY}:
-		tests = tuple(functools.partial(operator.eq, v) for v in set(values))
+		tests = tuple(functools.partial(operator.eq, v) for v in unique)
 	elif feature_type == mldata.Feature.Type.CONTINUOUS:
-		tests = tuple(functools.partial(operator.le, v) for v in values)
+		tests = tuple(functools.partial(operator.le, v) for v in unique)
 	else:
 		tests = tuple()
 	return tests
