@@ -5,7 +5,6 @@ import algorithm
 import crossval
 import metrics
 import mldata
-# path: str, skip_cv: bool, max_depth: int, use_info_gain: bool
 import mlutil
 
 

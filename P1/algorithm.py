@@ -50,10 +50,9 @@ class ID3(Model):
 		self.model = None
 		super(ID3, self).__init__()
 
-	def train(self, data: mldata.ExampleSet):
+	def train(self, data: mldata.ExampleSet) -> NoReturn:
 		self.model = self.id3(data, node.Node())
 		self._get_model_metrics()
-		return self.model, self.model_metrics
 
 	def _get_model_metrics(self) -> NoReturn:
 		if self.model is None:
