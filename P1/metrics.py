@@ -114,8 +114,8 @@ def probability(
 		min_len = min(len(event), len(given))
 		g_counts = collections.Counter(given)
 		pr_g = {g: freq / len(given) for g, freq in g_counts.items()}
-		joint_freq = [(e, g) for e, g in zip(event, given)]
-		joint_counts = collections.Counter(joint_freq)
+		joint_events = [(e, g) for e, g in zip(event, given)]
+		joint_counts = collections.Counter(joint_events)
 		if given_test is None:
 			if event_test is None:
 				pr = {
@@ -132,7 +132,7 @@ def probability(
 					for eg, freq in joint_counts.items() if given_test(eg[1])}
 			else:
 				eg_freq = sum(
-					1 for e, g in joint_freq
+					1 for e, g in joint_events
 					if event_test(e) and given_test(g))
 				pr = (eg_freq / min_len) / pr
 	return pr
