@@ -8,7 +8,7 @@ from typing import Any, Callable, Collection, Mapping
 from typing import Iterable, Union
 
 """
-research idea: at each step of the decision tree, instead of considering
+Research idea: at each step of the decision tree, instead of considering
 the full dataset, create n subsets. for each of these subsets, add on a
 random, balanced number of examples from other subsets.
 find the feature partition that has the maximum average information gain
@@ -53,24 +53,26 @@ def shuffle_blocks(labels: Iterable, blocks: int):
 		random.shuffle(neg_deck)
 		data[x] = [
 			data[x] + pos_deck[:additional_pos] + neg_deck[:additional_neg]]
-	return data # indices indicating which for each block
+	return data  # indices indicating which for each block
 
 
-#def stochastic_information_gain(features, labels, partitions, use_ig):
-def stochastic_information_gain(event: Collection,
-	event_tests: Collection[Callable],
-	given: Collection,
-	given_tests: Collection[Callable],
-	partitions: int = 5) -> float:
+# def stochastic_information_gain(features, labels, partitions, use_ig):
+def stochastic_information_gain(
+		event: Collection,
+		event_tests: Collection[Callable],
+		given: Collection,
+		given_tests: Collection[Callable],
+		partitions: int = 5) -> float:
 	listed_indices = shuffle_blocks(event, partitions)
 	ig = []
 	for i in range(listed_indices):
 		subset_feats = given[listed_indices[i]]
 		subset_labels = event[listed_indices[i]]
-		#if use_ig:
+		# if use_ig:
 		#	ig[i] = info_gain(subset_labels, subset_feats)
-		#else:
-		ig.append(gain_ratio(subset_labels, event_tests, given_tests, subset_feats))
+		# else:
+		ig.append(
+			gain_ratio(subset_labels, event_tests, given_tests, subset_feats))
 	return statistics.mean(ig)
 
 
@@ -83,10 +85,28 @@ def gain_ratio(
 		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
-	try:
-		return info_gain(event, event_tests, given, given_tests) / sum([entropy(probability(event, e)) for e in event_tests])
-	except:
-		return 0
+	"""Computes the gain ratio over an event and given random variables.
+
+	Tests that evaluate event values and given values are used to compute the
+	conditional and unconditional probabilities used when computing the
+	information gain.
+
+	For a continuous given variable, it is convention to only provide a single
+	given test, which is testing if values of the given variable are greater
+	than some threshold. For binary and continuous variables, tests that
+	evaluated all possible values of the variable are expected as input.
+
+	Args:
+		event: Collection of values representing the event random variable.
+		event_tests: Tests on which to evaluate each value of event.
+		given: Collection of values representing the given random variable.
+		given_tests: tests on which to evaluate each value of given.
+
+	Returns:
+		Gain ratio of the event and a given random variable.
+	"""
+	given_entropy = sum(entropy(probability(event, e)) for e in event_tests)
+	return info_gain(event, event_tests, given, given_tests) / given_entropy
 
 
 def info_gain(
@@ -94,45 +114,108 @@ def info_gain(
 		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
+	"""Computes the information gain over an event and given random variables.
+
+	Tests that evaluate event values and given values are used to compute the
+	conditional and unconditional probabilities used when computing the
+	information gain.
+
+	For a continuous given variable, it is convention to only provide a
+	single given test, which is testing if values of the given variable are
+	greater than some threshold. For binary and continuous variables,
+	tests that evaluated all possible values of the variable are expected as
+	input.
+
+	Args:
+		event: Collection of values representing the event random variable.
+		event_tests: Tests on which to evaluate each value of event.
+		given: Collection of values representing the given random variable.
+		given_tests: tests on which to evaluate each value of given.
+
+	Returns:
+		Information gain of the event and a given random variable.
+	"""
 	cond_entropy = conditional_entropy(event, event_tests, given, given_tests)
-	# find the pure H(Y)
-	h_y = sum([entropy(probability(event, e)) for e in event_tests])
-	gain = h_y - cond_entropy
+	event_entropy = sum(entropy(probability(event, e)) for e in event_tests)
+	gain = event_entropy - cond_entropy
 	return 0 if math.isnan(gain) else gain
 
 
-# todo: modify so we cover both probabilities of x values.
 def conditional_entropy(
 		event: Collection,
-		event_tests: Collection[Callable],  # y==1
+		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
-	newboi = [functools.partial(lambda x: not g(x)) for g in given_tests]
-	combined = given_tests + newboi
-	# todo: if it's not nominal, add this new function to a collection
+	"""Computes the conditional entropy over an event and given random
+	variables.
+
+	Tests that evaluate event values and given values are used to compute the
+	conditional and unconditional probabilities used when computing the
+	conditional entropy.
+
+	For a continuous given variable, it is convention to only provide a
+	single given test, which is testing if values of the given variable are
+	greater than some threshold. For binary and continuous variables,
+	tests that evaluated all possible values of the variable are expected as
+	input.
+
+	Args:
+		event: Collection of values representing the event random variable.
+		event_tests: Tests on which to evaluate each value of event.
+		given: Collection of values representing the given random variable.
+		given_tests: tests on which to evaluate each value of given.
+
+	Returns:
+		Conditional entropy of the event and a given random variable.
+	"""
+	gvn_tests = given_tests
+	if len(given_tests) == 1:
+		new_boi = [functools.partial(lambda x: not g(x)) for g in given_tests]
+		gvn_tests = [*given_tests, *new_boi]
 	return sum(
 		probability(given, g) * entropy(probability(event, e, given, g))
-		for e in event_tests for g in combined)
-
-
-# for e in event_tests for g in given_tests)
-def mytest(funct: Callable, input):
-	return not funct(input)
+		for e in event_tests for g in gvn_tests)
 
 
 def entropy(prob: float, base=2) -> float:
+	"""Computes the entropy of a probability.
+	Args:
+		prob: Probability to use when computing entropy.
+		base: Base of the logarithm function.
+
+	Returns:
+		Shannon entropy.
+	"""
 	value = 0
 	if prob != 0 and base not in {0, 1}:
 		value = - math.log(prob, base) * prob
 	return value
 
 
-# todo: get it to work using two tests instead of one
 def probability(
 		event: Collection,
 		event_test: Callable = None,
 		given: Collection = None,
 		given_test: Callable = None) -> Union[float, Mapping[Any, float]]:
+	"""Computes either the unconditional or conditional probability.
+
+	If only the event is specified, the probability of each value it takes on
+	is computed. If the event test is specified then only the probability
+	that the event variable satisfies that test will be computed.
+
+	A similar procedure is followed for all possible combinations of event,
+	event test, given, and given test.
+
+	Args:
+		event: Collection of values representing the event random variable.
+		event_test: Test on which to evaluate each value of event.
+		given: Collection of values representing the given random variable.
+		given_test: Test on which to evaluate each value of given.
+
+	Returns:
+		A dictionary of probabilities or a single float probability.
+	"""
+	# Default probability of something not in the dictionary is 0.0.
 	pr = collections.defaultdict(float)
 	if event_test is None:
 		counts = collections.Counter(event)
@@ -140,6 +223,7 @@ def probability(
 	else:
 		pr = sum(map(event_test, event)) / len(event)
 	if given is not None:
+		# To consider event and given that are not of the same length.
 		min_len = min(len(event), len(given))
 		g_counts = collections.Counter(given)
 		pr_g = collections.defaultdict(float)
@@ -155,13 +239,15 @@ def probability(
 			else:
 				pr.update({
 					eg: (freq / min_len) / pr_g[eg[1]]
-					for eg, freq in joint_counts.items() if event_test(eg[0])})
-		else:  # todo add flag to see if we want 'not' vs 'yes'.
+					for eg, freq in joint_counts.items() if
+					event_test(eg[0])})
+		else:
 			if event_test is None:
 				pr.clear()
 				pr.update({
 					eg: (freq / min_len) / pr_g[eg[1]]
-					for eg, freq in joint_counts.items() if given_test(eg[1])})
+					for eg, freq in joint_counts.items() if
+					given_test(eg[1])})
 			else:
 				eg_freq = sum(
 					1 for e, g in joint_events
