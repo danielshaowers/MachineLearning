@@ -109,11 +109,12 @@ class ID3(Model):
 			return node.Node(data=majority_label, parent=parent)
 		# majority label
 		# helper method  find the best feature of all available
-		feature, test = self._get_best_feature_and_test(data)
+		feature_idx, test = self._get_best_feature_and_test(data)
+		feature = mlutil.get_feature_examples(data, feature_idx)
 		# helper class to run our tests
 		parent.data = Test(feature=feature, test=test)
 		# separate data
-		left_data, right_data = self._partition_data(data, feature, test)
+		left_data, right_data = self._partition_data(data, feature_idx, test)
 		# into two groups according to our best test
 		# if there are no elements in one partition,
 		if len(left_data) == 0:
@@ -137,35 +138,29 @@ class ID3(Model):
 		split_tests = mlutil.create_all_split_tests(data)
 		label_tests = mlutil.create_split_tests(
 			labels, mldata.Feature.Type.BINARY)
-		# todo: split_values is getting the same values every time :(
 		split_values = [
 			# finds the information gain or gain ratio of each test
-
-			# self.split_function(labels, label_test, feature_vals,
-			# feature_tests
 			[
-				self.split_function(labels, label_tests, f, t) for t in
+				self.split_function(labels, label_tests, f, [t]) for t in
 				split_tests[i]]
 			for i, f in enumerate(features)]
 		i_max_feature = int(np.argmax([max(v) for v in split_values]))
 		i_max_test = np.argmax(split_values[i_max_feature])
 		best_test = split_tests[i_max_feature][i_max_test]
-		# best_feature = data.schema[i_max_feature + 2] #off by two because we
-		# removed the first two features
-		best_feature = i_max_feature  # + 2 may want to add two to correspond
+		best_feature = data.schema[i_max_feature]
+		#best_feature = i_max_feature  # + 2 may want to add two to correspond
 		# to the ones we ignored
-		return best_feature, best_test
-
+		return i_max_feature, best_test
+	#todo: confirm the indexing with i_max feature is correct
+	#separate data according to our test
 	@staticmethod
 	def _partition_data(
 			data: mldata.ExampleSet,
-			feature: mldata.Feature,
+			idx,
 			test: Callable) -> Tuple:
-		idx = mlutil.get_feature_index(data, feature)
-		data1, data2 = itertools.tee(data)
-		left_data = mldata.ExampleSet(filter(lambda e: test(e[idx]), data1))
-		right_data = mldata.ExampleSet(
-			itertools.filterfalse(lambda e: test(e[idx]), data2))
+		#idx = mlutil.get_feature_index(data, feature)
+		left_data = mldata.ExampleSet([e for e in data if test(e[idx])])
+		right_data = mldata.ExampleSet([e for e in data if not test(e[idx])])
 		return left_data, right_data
 
 	def _at_max_depth(self, depth: int) -> bool:

@@ -32,7 +32,7 @@ def main() -> NoReturn:
 		temp, path, skip_cv, max_depth, use_info_gain = argv
 		print('accepted arguments ' + path + skip_cv + max_depth + use_info_gain)
 	except:
-		path = 'volcanoes'
+		path = 'spam'
 		skip_cv = 0
 		max_depth = 10
 		use_info_gain = 1
