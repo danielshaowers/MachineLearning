@@ -1,5 +1,6 @@
 import collections
 import copy
+import functools
 import math
 import random
 import statistics
@@ -86,18 +87,21 @@ def info_gain(
 
 # todo: modify so we cover both probabilities of x values.
 def conditional_entropy(
+
 		event: Collection,
 		event_tests: Collection[Callable],  # y==1
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
+	newboi = [functools.partial(lambda x: not g(x)) for g in given_tests]
+	combined = given_tests + newboi
 	# todo: if it's not nominal, add this new function to a collection
 	return sum(
 		probability(given, g) * entropy(probability(event, e, given, g))
-		for e in event_tests for g in given_tests)
-
+		for e in event_tests for g in combined)
 
 # for e in event_tests for g in given_tests)
-
+def mytest(funct: Callable, input):
+	return not funct(input)
 
 def entropy(prob: float, base=2) -> float:
 	value = 0
