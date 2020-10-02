@@ -95,8 +95,7 @@ def get_features(
 
 
 # generate feature examples in a nested tuple. each index corresponds to one
-# feature.
-# exclude the truth label and the id
+# feature. exclude the truth label and the id
 def get_feature_examples(
 		data: mldata.ExampleSet,
 		start_index: int = None,

@@ -44,7 +44,7 @@ def main() -> NoReturn:
 		use_info_gain = True
 
 	data = mldata.parse_c45(dataset, data_path)
-	# data = mldata.ExampleSet([e for i, e in enumerate(data) if i < 30])
+	data = mldata.ExampleSet([e for i, e in enumerate(data) if i < 30])
 	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
 	learner = algorithm.ID3(max_depth=max_depth, split_function=split_criteria)
 	# experiment: multiple iterations and use the majority label
