@@ -19,13 +19,10 @@ def create_all_split_tests(
 		data: mldata.ExampleSet,
 		drop_single_tests: bool = True,
 		as_tuple: bool = True) -> Union[Tuple, Generator]:
-	types = (feature.type for feature in get_features_info(data))
-	exs = get_feature_examples(data, as_tuple=False)
-	labels = get_labels(data, as_tuple=False)
-	# TODO as_tuple = False and then tuple(tuple(t) for t in tests)
+	types = [feature.type for feature in get_features_info(data)] #replace with generator later
+	exs = get_feature_examples(data, as_tuple=True)
+	labels = get_labels(data, as_tuple=True)
 	tests = (create_split_tests(e, t, labels) for e, t in zip(exs, types))
-	if drop_single_tests:
-		tests = (t for t in tests if len(t) > 1)
 	return tuple(tests) if as_tuple else tests
 
 
@@ -35,12 +32,12 @@ def create_split_tests(
 		labels: Iterable = None,
 		as_tuple: bool = True) -> Union[Tuple, Generator]:
 	tests = ()
-	categorical = {mldata.Feature.Type.NOMINAL, mldata.Feature.Type.BINARY}
+	categorical = {mldata.Feature.Type.NOMINAL, mldata.Feature.Type.BINARY, mldata.Feature.Type.CLASS}
 	if feature_type in categorical:
-		tests = create_discrete_split_tests(values, as_tuple=False)
+		tests = create_discrete_split_tests(values, as_tuple=True)
 	elif feature_type == mldata.Feature.Type.CONTINUOUS and labels is not None:
-		split_values = find_split_values(values, labels, as_tuple=False)
-		tests = create_continuous_split_tests(split_values, as_tuple=False)
+		split_values = find_split_values(values, labels, as_tuple=True)
+		tests = create_continuous_split_tests(split_values, as_tuple=True)
 	return tuple(tests) if as_tuple else tests
 
 
@@ -72,7 +69,7 @@ def is_homogeneous(data: mldata.ExampleSet) -> bool:
 
 
 def get_majority_label(data: mldata.ExampleSet):
-	return Counter(get_labels(data)).most_common()
+	return Counter(get_labels(data)).most_common(1)[0][0]
 
 
 def get_features(
@@ -97,7 +94,7 @@ def get_features(
 
 # generate feature examples in a nested tuple. each index corresponds to one
 # feature.
-# exclude the truth label and the two id's
+# exclude the truth label and the id
 def get_feature_examples(
 		data: mldata.ExampleSet,
 		start_index: int = None,

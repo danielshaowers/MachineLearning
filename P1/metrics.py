@@ -87,7 +87,6 @@ def info_gain(
 
 # todo: modify so we cover both probabilities of x values.
 def conditional_entropy(
-
 		event: Collection,
 		event_tests: Collection[Callable],  # y==1
 		given: Collection,
