@@ -22,6 +22,7 @@ def create_all_split_tests(
 	types = (feature.type for feature in get_features_info(data))
 	exs = get_feature_examples(data, as_tuple=False)
 	labels = get_labels(data, as_tuple=False)
+	# TODO as_tuple = False and then tuple(tuple(t) for t in tests)
 	tests = (create_split_tests(e, t, labels) for e, t in zip(exs, types))
 	if drop_single_tests:
 		tests = (t for t in tests if len(t) > 1)

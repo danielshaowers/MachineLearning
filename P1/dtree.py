@@ -47,7 +47,6 @@ def main() -> NoReturn:
 	data = mldata.parse_c45(path, "C:/users/danie/PycharmProjects/")  # this
 	# input might have to be fixed? i couldn't get it work as an absolute path
 	all_labels = mlutil.get_labels(data)
-
 	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
 
 	# initialize the tests, but don't do any training yet
@@ -101,7 +100,7 @@ def train_test(learner: algorithm.ID3, train_set, test_set):
 	learner.train(train_set)
 	# TODO Shouldn't this be test_test?
 	pred_labels = learner.predict(train_set)
-	n_correct = sum(1 for p, t in zip(pred_labels, test_labels) if p == t)
+	n_correct = sum(map(lambda p, t: p == t, zip(pred_labels, test_labels)))
 	accuracy = n_correct / len(pred_labels)
 	size = learner.model_metrics[algorithm.ID3.Metrics.TREE_SIZE]
 	depth = learner.model_metrics[algorithm.ID3.Metrics.MAX_DEPTH]
