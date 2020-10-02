@@ -9,6 +9,7 @@ import mlutil
 
 
 def main() -> NoReturn:
+
 	"""
 	Args:
 		path: Path to the data. If this is “/a/b/someproblem” then you
@@ -27,9 +28,14 @@ def main() -> NoReturn:
 	Returns:
 		None
 	"""
-
-	temp, path, skip_cv, max_depth, use_info_gain = argv
-	print('accepted arguments ' + path + skip_cv + max_depth + use_info_gain)
+	try:
+		temp, path, skip_cv, max_depth, use_info_gain = argv
+		print('accepted arguments ' + path + skip_cv + max_depth + use_info_gain)
+	except:
+		path = 'volcanoes'
+		skip_cv = 0
+		max_depth = 10
+		use_info_gain = 1
 	max_depth = int(max_depth)
 	skip_cv = bool(skip_cv)
 	use_info_gain = bool(use_info_gain)
@@ -37,9 +43,10 @@ def main() -> NoReturn:
 	# -> None:
 	# in the real thing there will be a command line input and we need to
 	# parse the arguments that way
-
+	#todo:
 	data = mldata.parse_c45(path, "C:/users/danie/PycharmProjects/")  # this
 	# input might have to be fixed? i couldn't get it work as an absolute path
+	all_labels = mlutil.get_labels(data)
 
 	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
 
