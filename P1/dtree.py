@@ -1,4 +1,5 @@
 import itertools
+import random
 import statistics
 from sys import argv
 from typing import NoReturn
@@ -11,6 +12,7 @@ import mlutil
 
 
 def main() -> NoReturn:
+	random.seed(a=0)
 	try:
 		_, path, use_cv, max_depth, use_info_gain = argv
 		max_depth = int(max_depth)
@@ -37,15 +39,17 @@ def main() -> NoReturn:
 		print('<use_info_gain> \t Use information gain as the split\n')
 		print('\t\t\t\t\t criteria. Otherwise, use gain ratio')
 		# TODO Remove before submission
-		data_path = '.'
+		data_path = '..'
 		dataset = 'spam'
 		use_cv = False
 		max_depth = 10
-		use_info_gain = True
+		use_info_gain = 0
 
 	data = mldata.parse_c45(dataset, data_path)
 	# data = mldata.ExampleSet([e for i, e in enumerate(data) if i < 30])
-	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
+	#split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
+	data = mldata.ExampleSet([e for i, e in enumerate(data)])
+	split_criteria = metrics.info_gain if use_info_gain >= 1  else metrics.gain_ratio if use_info_gain == 0 else metrics.stochastic_information_gain
 	learner = algorithm.ID3(max_depth=max_depth, split_function=split_criteria)
 	# experiment: multiple iterations and use the majority label
 	accuracies = []
