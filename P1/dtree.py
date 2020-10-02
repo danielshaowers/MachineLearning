@@ -34,7 +34,7 @@ def main() -> NoReturn:
 	except:
 		path = 'spam'
 		skip_cv = 0
-		max_depth = 10
+		max_depth = 3
 		use_info_gain = 1
 	max_depth = int(max_depth)
 	skip_cv = bool(skip_cv)
@@ -46,7 +46,7 @@ def main() -> NoReturn:
 	#todo:
 	data = mldata.parse_c45(path, "C:/users/danie/PycharmProjects/")  # this
 	# input might have to be fixed? i couldn't get it work as an absolute path
-	all_labels = mlutil.get_labels(data)
+	data = mldata.ExampleSet([e for i,e in enumerate(data) if i < 30])
 
 	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
 
@@ -99,8 +99,7 @@ def train_test(learner: algorithm.ID3, train_set, test_set):
 	train_labels = mlutil.get_labels(train_set)
 	test_labels = mlutil.get_labels(test_set)
 	learner.train(train_set)
-	# TODO Shouldn't this be test_test?
-	pred_labels = learner.predict(train_set)
+	pred_labels = learner.predict(test_set)
 	n_correct = sum(1 for p, t in zip(pred_labels, test_labels) if p == t)
 	accuracy = n_correct / len(pred_labels)
 	size = learner.model_metrics[algorithm.ID3.Metrics.TREE_SIZE]

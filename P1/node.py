@@ -15,6 +15,8 @@ class Node:
 		return self.right is not None
 
 	def get_max_depth(self, depth: int = 0) -> int:
+		if self.is_leaf():
+			return depth
 		if self.has_left_child():
 			depth = max(self.left.get_max_depth(depth + 1), depth)
 		if self.has_right_child():

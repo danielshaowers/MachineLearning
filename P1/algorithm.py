@@ -53,7 +53,7 @@ class ID3(Model):
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
 		self.model = self.id3(data, node.Node())
 		self._get_model_metrics()
-
+		return self.model_metrics
 	# return the relevant metrics to be reported
 	def _get_model_metrics(self) -> NoReturn:
 		if self.model is None:
@@ -70,6 +70,7 @@ class ID3(Model):
 			predictions = tuple(
 				self._predict_example(mldata.ExampleSet([example]), self.model)
 				for example in data)
+
 		return predictions
 
 	# recursively predicts the label of a single example
@@ -77,8 +78,8 @@ class ID3(Model):
 		if model.is_leaf():  # base condition. returns true or false
 			return model.data
 		idx = mlutil.get_feature_index(example, model.data.feature)
-		val = mlutil.get_features(example, example_index=0, feature_index=idx)
-		result: bool = model.data.evaluate(val)
+		val = mlutil.get_features(example, example_index=0, feature_index=idx) # returns the specific feature valu
+		result: bool = model.data.evaluate(val)  # result of the test at this node
 		if result:
 			predicted = self._predict_example(example, model.left)
 		else:
@@ -121,22 +122,28 @@ class ID3(Model):
 
 	def _get_best_feature_and_test(self, data: mldata.ExampleSet) -> Tuple:
 		labels = mlutil.get_labels(data)
-		feature_exs = mlutil.get_feature_examples(data, as_tuple=False)
+		# todo: see if it works with the generator vs tuple
+		feature_exs = mlutil.get_feature_examples(data)
 		split_tests = mlutil.create_all_split_tests(data)
 		label_type = mlutil.get_label_info(data).type
 		label_tests = mlutil.create_split_tests(labels, label_type)
-		# todo: split_values is getting the same values every time :(
 		# finds the information gain or gain ratio of each test
 		# self.split_function(labels, label_test, feature_vals,
 		# feature_tests
+		print("Generating performance metrics...")
 		split_values = [[
 			self.split_function(labels, label_tests, f, [t])
 			# get the tests for the ith feature
 			for t in split_tests[i]] for i, f in enumerate(feature_exs)]
-		i_max_feature = int(np.argmax([max(v) for v in split_values]))
+		for v in split_values:
+			if len(v) == 0:
+				v = [0]
+		i_max_feature = int(np.argmax([max(v + [0]) for v in split_values])) #we add a zero in case the list is empty
 		i_max_test = np.argmax(split_values[i_max_feature])
 		best_test = split_tests[i_max_feature][i_max_test]
-		best_feature = data.schema[i_max_feature]
+		best_feature = data.schema[i_max_feature + 1]
+
+		print("found best feature at index" + str(i_max_feature))
 		# best_feature = i_max_feature  # + 2 may want to add two to correspond
 		# to the ones we ignored
 		return best_feature, best_test
@@ -153,7 +160,7 @@ class ID3(Model):
 		return left_data, right_data
 
 	def _at_max_depth(self, depth: int) -> bool:
-		return False if self.max_depth < 1 else depth == self.max_depth
+		return False if self.max_depth < 1 else depth >= self.max_depth
 
 
 class Test:
