@@ -32,7 +32,6 @@ class Model(ABC):
 
 class ID3(Model):
 	"""Decision tree classifier using the ID3 algorithm.
-
 	"""
 
 	class Metrics(str, enum.Enum):
@@ -51,9 +50,9 @@ class ID3(Model):
 		super(ID3, self).__init__()
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
-		self.model = self.id3(data, None)
+		self.model = self.id3(data)
 		self._get_model_metrics()
-		return self.model_metrics
+
 	# return the relevant metrics to be reported
 	def _get_model_metrics(self) -> NoReturn:
 		if self.model is None:
@@ -70,7 +69,6 @@ class ID3(Model):
 			predictions = tuple(
 				self._predict_example(mldata.ExampleSet([example]), self.model)
 				for example in data)
-
 		return predictions
 
 	# recursively predicts the label of a single example
@@ -78,8 +76,10 @@ class ID3(Model):
 		if model.is_leaf():  # base condition. returns true or false
 			return model.data
 		idx = mlutil.get_feature_index(example, model.data.feature)
-		val = mlutil.get_features(example, example_index=0, feature_index=idx) # returns the specific feature valu
-		result: bool = model.data.evaluate(val)  # result of the test at this node
+		# returns the specific feature value
+		val = mlutil.get_features(example, example_index=0, feature_index=idx)
+		# result of the test at this node
+		result: bool = model.data.evaluate(val)
 		if result:
 			predicted = self._predict_example(example, model.left)
 		else:
@@ -90,7 +90,7 @@ class ID3(Model):
 	def id3(
 			self,
 			data: mldata.ExampleSet,
-			parent: node.Node,
+			parent: node.Node = None,
 			depth: int = 0) -> node.Node:
 		"""Generates a decision tree using the ID3 algorithm.
 
@@ -106,20 +106,20 @@ class ID3(Model):
 		if mlutil.is_homogeneous(data) or self._at_max_depth(depth):
 			return node.Node(data=majority_label, parent=parent)
 		feature, test = self._get_best_feature_and_test(data)
-		currentN = node.Node(parent=parent)
-		currentN.data = Test(feature=feature, test=test)
+		current_node = node.Node(parent=parent)
+		current_node.data = Test(feature=feature, test=test)
 		left_data, right_data = self._partition_data(data, feature, test)
 		if len(left_data) == 0:
-			left_child = node.Node(data=majority_label, parent=currentN)
+			left_child = node.Node(data=majority_label, parent=current_node)
 		else:
-			left_child = self.id3(left_data, currentN, depth + 1)
+			left_child = self.id3(left_data, current_node, depth + 1)
 		if len(right_data) == 0:
-			right_child = node.Node(data=majority_label, parent=currentN)
+			right_child = node.Node(data=majority_label, parent=current_node)
 		else:
-			right_child = self.id3(right_data, currentN, depth + 1)
-		currentN.left = left_child
-		currentN.right = right_child
-		return currentN
+			right_child = self.id3(right_data, current_node, depth + 1)
+		current_node.left = left_child
+		current_node.right = right_child
+		return current_node
 
 	def _get_best_feature_and_test(self, data: mldata.ExampleSet) -> Tuple:
 		labels = mlutil.get_labels(data)
@@ -129,27 +129,17 @@ class ID3(Model):
 		label_type = mlutil.get_label_info(data).type
 		label_tests = mlutil.create_split_tests(labels, label_type)
 		# finds the information gain or gain ratio of each test
-		# self.split_function(labels, label_test, feature_vals,
-		# feature_tests
-		print("Generating performance metrics...")
+		# self.split_function(labels, label_test, feature_vals, feature_tests
 		split_values = [[
 			self.split_function(labels, label_tests, f, [t])
 			# get the tests for the ith feature
 			for t in split_tests[i]] for i, f in enumerate(feature_exs)]
-		for v in split_values:
-			if len(v) == 0:
-				v = [0]
-		i_max_feature = int(np.argmax([max(v + [0]) for v in split_values])) #we add a zero in case the list is empty
+		i_max_feature = int(np.argmax([max(v) for v in split_values]))
 		i_max_test = np.argmax(split_values[i_max_feature])
 		best_test = split_tests[i_max_feature][i_max_test]
 		best_feature = data.schema[i_max_feature + 1]
-
-		print("found best feature at index" + str(i_max_feature))
-		# best_feature = i_max_feature  # + 2 may want to add two to correspond
-		# to the ones we ignored
 		return best_feature, best_test
 
-	# todo: confirm the indexing with i_max feature is correct
 	@staticmethod
 	def _partition_data(
 			data: mldata.ExampleSet,

@@ -7,11 +7,19 @@ import statistics
 from typing import Any, Callable, Collection, Mapping
 from typing import Iterable, Union
 
+"""
+research idea: at each step of the decision tree, instead of considering
+the full dataset, create n subsets. for each of these subsets, add on a
+random, balanced number of examples from other subsets.
+find the feature partition that has the maximum average information gain
+this addresses the variance within decision trees by considering the
+feature most resistant to variance while  still ensuring that all the data
+is used at least once
+"""
+
 
 # shuffle the training data into n blocks with a random number of additional
 # units from other blocks
-
-
 def shuffle_blocks(labels: Iterable, blocks: int):
 	pos_lab = find_indices(labels, lambda y: y > 0)
 	neg_lab = find_indices(labels, lambda y: y <= 0)
@@ -98,9 +106,11 @@ def conditional_entropy(
 		probability(given, g) * entropy(probability(event, e, given, g))
 		for e in event_tests for g in combined)
 
+
 # for e in event_tests for g in given_tests)
 def mytest(funct: Callable, input):
 	return not funct(input)
+
 
 def entropy(prob: float, base=2) -> float:
 	value = 0
