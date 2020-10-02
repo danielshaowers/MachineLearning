@@ -90,9 +90,10 @@ def conditional_entropy(
         event: Collection,
         event_tests: Callable,  # y==1
         given: Collection,
-        given_tests: Collection[Callable]) -> float:
+        given_tests: Callable) -> float:
     # todo: if it's not nominal, add this new function to a collection
     newboi = functools.partial(lambda x: not given_tests(x))
+    given_tests = [given_tests, newboi]
     return sum(
         probability(given, given_tests) * entropy(probability(event, e, given, given_tests))
         for e in event_tests)
