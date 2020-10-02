@@ -16,6 +16,9 @@ def main() -> NoReturn:
 		max_depth = int(max_depth)
 		use_cv = bool(use_cv)
 		use_info_gain = bool(use_info_gain)
+		split_path = path.split('\\')
+		dataset = split_path[-1]
+		data_path = '\\'.join(split_path[:-1])
 		print('Accepted Arguments')
 		print('-----------------------')
 		print(f'Path: {path}')
@@ -31,12 +34,13 @@ def main() -> NoReturn:
 		print('<max_depth> \t Non-negative integer that sets the maximum')
 		print('\t\t\t\t depth of the tree. If value is zero, you should')
 		print('\t\t\t\t grow the full tree.')
-		path = 'spam'
+		data_path = '.'
+		dataset = 'spam'
 		use_cv = False
 		max_depth = 10
 		use_info_gain = True
 
-	data = mldata.parse_c45(path)
+	data = mldata.parse_c45(dataset, data_path)
 	data = mldata.ExampleSet([e for i, e in enumerate(data) if i < 30])
 	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
 	learner = algorithm.ID3(max_depth=max_depth, split_function=split_criteria)
