@@ -1,6 +1,6 @@
 import enum
 from abc import ABC, abstractmethod
-from typing import Callable, NoReturn, Tuple
+from typing import Any, Callable, NoReturn, Tuple
 
 import numpy as np
 
@@ -125,9 +125,8 @@ class ID3(Model):
 		labels = mlutil.get_labels(data)
 		feature_exs = mlutil.get_feature_examples(data)
 		split_tests = mlutil.create_all_split_tests(data)
-		label_type = mlutil.get_label_info(data).type
-		label_tests = mlutil.create_split_tests(
-			labels, label_type, as_tuple=False)
+		l_type = mlutil.get_label_info(data).type
+		label_tests = mlutil.create_split_tests(labels, l_type, as_tuple=False)
 		# finds the information gain or gain ratio of each test
 		split_values = [[
 			self.split_function(labels, label_tests, f, [t])
@@ -136,6 +135,7 @@ class ID3(Model):
 		i_max_feature = int(np.argmax([max(v) for v in split_values]))
 		i_max_test = np.argmax(split_values[i_max_feature])
 		best_test = split_tests[i_max_feature][i_max_test]
+		# ID feature not considered when generating feature tests (add 1)
 		best_feature = data.schema[i_max_feature + 1]
 		return best_feature, best_test
 
@@ -143,7 +143,7 @@ class ID3(Model):
 	def _partition_data(
 			data: mldata.ExampleSet,
 			feature: mldata.Feature,
-			test: Callable) -> Tuple:
+			test: Callable[[Any], bool]) -> Tuple:
 		idx = mlutil.get_feature_index(data, feature)
 		left_data = mldata.ExampleSet([e for e in data if test(e[idx])])
 		right_data = mldata.ExampleSet([e for e in data if not test(e[idx])])
