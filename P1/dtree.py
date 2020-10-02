@@ -29,11 +29,13 @@ def main() -> NoReturn:
 	except ValueError:
 		print('Not all arguments were provided. Provide the following:')
 		print('dtree.py <path> <skip_cv> <max_depth> <use_info_gain>')
-		print('<path> \t\t\t Path to the data')
-		print('<skip_cv> \t\t Skip cross validation if 1')
-		print('<max_depth> \t Non-negative integer that sets the maximum')
-		print('\t\t\t\t depth of the tree. If value is zero, you should')
-		print('\t\t\t\t grow the full tree.')
+		print('<path> \t\t\t\t Path to the data\n')
+		print('<skip_cv> \t\t\t Skip cross validation if 1\n')
+		print('<max_depth> \t\t Non-negative integer that sets the maximum')
+		print('\t\t\t\t\t depth of the tree. If value is zero, you should')
+		print('\t\t\t\t\t grow the full tree\n')
+		print('<use_info_gain> \t Use information gain as the split\n')
+		print('\t\t\t\t\t criteria. Otherwise, use gain ratio')
 		# TODO Remove before submission
 		data_path = '.'
 		dataset = 'spam'
@@ -42,7 +44,7 @@ def main() -> NoReturn:
 		use_info_gain = True
 
 	data = mldata.parse_c45(dataset, data_path)
-	data = mldata.ExampleSet([e for i, e in enumerate(data) if i < 30])
+	# data = mldata.ExampleSet([e for i, e in enumerate(data) if i < 30])
 	split_criteria = metrics.info_gain if use_info_gain else metrics.gain_ratio
 	learner = algorithm.ID3(max_depth=max_depth, split_function=split_criteria)
 	# experiment: multiple iterations and use the majority label
