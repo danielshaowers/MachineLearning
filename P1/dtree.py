@@ -1,3 +1,4 @@
+import statistics
 from sys import argv
 from typing import NoReturn
 
@@ -34,7 +35,7 @@ def main() -> NoReturn:
 	except:
 		path = 'spam'
 		skip_cv = 0
-		max_depth = 3
+		max_depth = 10
 		use_info_gain = 1
 	max_depth = int(max_depth)
 	skip_cv = bool(skip_cv)
@@ -55,32 +56,40 @@ def main() -> NoReturn:
 	# experiment: multiple iterations and use the majority label
 	accuracy = []
 	tree_size = []
-	first_feat = []
+	first_feats = []
 	depth = []
 	if skip_cv:
+		_, acc, tree_size, first_feat, depth = train_test(learner, data, data)
+		print('Average Metrics')
+		print('-----------------------')
+		print_results(acc, tree_size, depth, first_feat)
+	else:
 		fold_num = 5
 		folds = crossval.get_folds(data, fold_num)
 		for i in range(fold_num):
 			train, test = crossval.get_train_test_split(folds, i)
-			acc, pred, size, root_feat, d = train_test(learner, train, test)
+			_, acc, size, first_feat, d = train_test(learner, train, test)
 			accuracy.append(acc)
 			tree_size.append(size)
-			first_feat.append(root_feat)
+			first_feats.append(first_feat)
 			depth.append(d)
-			print(f'Results of {i}th fold')
+			print(f'Results of {i+1}th fold')
 			print('-----------------------')
-			print(f'Accuracy: {acc[i]}')
+			print(f'Accuracy: {accuracy[i]}')
 			print(f'Size: {tree_size[i]}')
 			print(f'Maximum Depth: {depth[i]}')
-			print(f'First Feature: {root_feat[i]}')
-	else:
-		acc, pred, acc, tree_size, depth = train_test(learner, data, data)
+			print(f'First Feature: {first_feats[i]}')
 		print('Average Metrics')
 		print('-----------------------')
-		print(f'Accuracy: {sum(acc) / len(acc)}')
-		print(f'Size: {sum(tree_size) / len(tree_size)}')
-		print(f'Maximum Depth: {sum(depth) / len(depth)}')
+		print(f'Accuracy: {statistics.mean(accuracy)}')
+		print(f'Size: {statistics.mean(tree_size)}')
+		print(f'Maximum Depth: {statistics.mean(depth)}')
 
+
+def print_results(acc, size, depth, first_feat):
+	print(f'Accuracy: {acc}')
+	print(f'Size: {size}')
+	print(f'Maximum Depth: {depth}')
 
 """
 research idea: at each step of the decision tree, instead of considering

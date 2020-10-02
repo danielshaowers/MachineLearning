@@ -51,7 +51,7 @@ class ID3(Model):
 		super(ID3, self).__init__()
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
-		self.model = self.id3(data, node.Node())
+		self.model = self.id3(data, None)
 		self._get_model_metrics()
 		return self.model_metrics
 	# return the relevant metrics to be reported
@@ -106,19 +106,20 @@ class ID3(Model):
 		if mlutil.is_homogeneous(data) or self._at_max_depth(depth):
 			return node.Node(data=majority_label, parent=parent)
 		feature, test = self._get_best_feature_and_test(data)
-		parent.data = Test(feature=feature, test=test)
+		currentN = node.Node(parent=parent)
+		currentN.data = Test(feature=feature, test=test)
 		left_data, right_data = self._partition_data(data, feature, test)
 		if len(left_data) == 0:
-			left_child = node.Node(data=majority_label, parent=parent)
+			left_child = node.Node(data=majority_label, parent=currentN)
 		else:
-			left_child = self.id3(left_data, parent, depth + 1)
-		parent.left = left_child
+			left_child = self.id3(left_data, currentN, depth + 1)
 		if len(right_data) == 0:
-			right_child = node.Node(data=majority_label, parent=parent)
+			right_child = node.Node(data=majority_label, parent=currentN)
 		else:
-			right_child = self.id3(right_data, parent, depth + 1)
-		parent.right = right_child
-		return parent
+			right_child = self.id3(right_data, currentN, depth + 1)
+		currentN.left = left_child
+		currentN.right = right_child
+		return currentN
 
 	def _get_best_feature_and_test(self, data: mldata.ExampleSet) -> Tuple:
 		labels = mlutil.get_labels(data)

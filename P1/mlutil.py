@@ -69,7 +69,7 @@ def is_homogeneous(data: mldata.ExampleSet) -> bool:
 
 
 def get_majority_label(data: mldata.ExampleSet):
-	return Counter(get_labels(data)).most_common()
+	return Counter(get_labels(data)).most_common(1)[0][0]
 
 
 def get_features(
