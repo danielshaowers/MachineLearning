@@ -73,11 +73,7 @@ def main() -> NoReturn:
 			statistics.mean(tree_sizes),
 			statistics.mean(depths))
 	else:
-		import time
-		start = time.time()
 		_, acc, tree_sizes, first_feat, depth = train_test(learner, data, data)
-		stop = time.time()
-		print(f'RUNTIME: {round(stop - start, 3)}s')
 		print('Average Metrics')
 		print('-----------------------')
 		print_results(acc, tree_sizes, depth, first_feat)
