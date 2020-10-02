@@ -53,19 +53,24 @@ def shuffle_blocks(labels: Iterable, blocks: int):
 		random.shuffle(neg_deck)
 		data[x] = [
 			data[x] + pos_deck[:additional_pos] + neg_deck[:additional_neg]]
-	return data
+	return data # indices indicating which for each block
 
 
-def stochastic_information_gain(x, labels, partitions, use_ig):
-	listed_indices = shuffle_blocks(labels, partitions)
+#def stochastic_information_gain(features, labels, partitions, use_ig):
+def stochastic_information_gain(event: Collection,
+	event_tests: Collection[Callable],
+	given: Collection,
+	given_tests: Collection[Callable],
+	partitions: int = 5) -> float:
+	listed_indices = shuffle_blocks(event, partitions)
+	ig = []
 	for i in range(listed_indices):
-		subset_feats = x[listed_indices[i]]
-		subset_labels = labels[listed_indices[i]]
-		ig = []
-		if use_ig:
-			ig[i] = info_gain(subset_labels, subset_feats)
-		else:
-			ig[i] = gain_ratio(subset_labels, subset_feats)
+		subset_feats = given[listed_indices[i]]
+		subset_labels = event[listed_indices[i]]
+		#if use_ig:
+		#	ig[i] = info_gain(subset_labels, subset_feats)
+		#else:
+		ig.append(gain_ratio(subset_labels, event_tests, given_tests, subset_feats))
 	return statistics.mean(ig)
 
 
@@ -78,7 +83,10 @@ def gain_ratio(
 		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
-	return info_gain(event, event_tests, given, given_tests) / entropy(given)
+	try:
+		return info_gain(event, event_tests, given, given_tests) / sum([entropy(probability(event, e)) for e in event_tests])
+	except:
+		return 0
 
 
 def info_gain(
