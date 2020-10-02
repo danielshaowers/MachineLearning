@@ -123,13 +123,12 @@ class ID3(Model):
 
 	def _get_best_feature_and_test(self, data: mldata.ExampleSet) -> Tuple:
 		labels = mlutil.get_labels(data)
-		# todo: see if it works with the generator vs tuple
 		feature_exs = mlutil.get_feature_examples(data)
 		split_tests = mlutil.create_all_split_tests(data)
 		label_type = mlutil.get_label_info(data).type
-		label_tests = mlutil.create_split_tests(labels, label_type)
+		label_tests = mlutil.create_split_tests(
+			labels, label_type, as_tuple=False)
 		# finds the information gain or gain ratio of each test
-		# self.split_function(labels, label_test, feature_vals, feature_tests
 		split_values = [[
 			self.split_function(labels, label_tests, f, [t])
 			# get the tests for the ith feature

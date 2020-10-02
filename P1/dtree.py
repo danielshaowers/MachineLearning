@@ -34,6 +34,7 @@ def main() -> NoReturn:
 		print('<max_depth> \t Non-negative integer that sets the maximum')
 		print('\t\t\t\t depth of the tree. If value is zero, you should')
 		print('\t\t\t\t grow the full tree.')
+		# TODO Remove before submission
 		data_path = '.'
 		dataset = 'spam'
 		use_cv = False
