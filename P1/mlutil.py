@@ -65,21 +65,21 @@ def get_features(data: mldata.ExampleSet, index: int = None) -> Tuple:
 		features = tuple(data[index][1:-1])
 	return features
 
-# generate feature examples in a nested tuple. each index corresponds to one feature.
-# exclude the truth label and the two id's
-def get_feature_examples(data: mldata.ExampleSet, index: int = None) -> Tuple:
-	if index is None:
-		examples = tuple(
-			tuple(data[e][f] for e in range(len(data)))
-			for f in range(2, len(data.schema) - 1))
-	else:
-		examples = tuple(example[index] for example in data)
-	return examples
 
-#get data values only, excluding the first two indices in data
+# generate feature examples in a nested tuple. each index corresponds to one
+# feature.
+# exclude the truth label and the two id's
+def get_feature_examples(data: mldata.ExampleSet, start: int = None) -> Tuple:
+	start = 1 if start is None else start
+	return tuple(
+		tuple(data[e][f] for e in range(len(data)))
+		for f in range(start, len(data.schema) - 1))
+
+
+# get data values only, excluding the first two indices in data
 def exclude_schema(data: mldata.ExampleSet):
 	new_data = []
-	for i,d in enumerate(data):
+	for i, d in enumerate(data):
 		new_data.append(d[2:])
 	return new_data
 
