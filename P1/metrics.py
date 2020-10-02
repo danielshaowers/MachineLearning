@@ -77,8 +77,11 @@ def info_gain(
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
 	cond_entropy = conditional_entropy(event, event_tests, given, given_tests)
-	return entropy(event) - cond_entropy
-
+	#find the pure H(Y)
+	h_y = -sum([entropy(probability(event, e)) for e in event_tests])
+	return h_y - cond_entropy
+#todo: this is where the problem is!! entropy takes the probability. here we're feeding in the labels themselves.
+#we need H(Y)
 
 def conditional_entropy(
 		event: Collection,
@@ -86,8 +89,9 @@ def conditional_entropy(
 		given: Collection,
 		given_tests: Collection[Callable]) -> float:
 	return sum(
-		probability(given, g) * entropy(probability(event, e, given, g))
-		for e in event_tests for g in given_tests)
+		probability(given, given_tests) * entropy(probability(event, e, given, given_tests))
+		for e in event_tests)
+		#for e in event_tests for g in given_tests)
 
 
 def entropy(prob: Union[float, int, Collection], base=2) -> float:
@@ -131,14 +135,17 @@ def probability(
 				pr = (eg_freq / min_len) / pr  # Pr(Y, X) / Pr(X) = Pr(Y|X)
 	return pr
 
-
+#calculate expectation given the value and its probability
 def expectation(
 		x: Union[float, int, Collection],
 		prob: Union[float, int, Collection]) -> float:
+	if isinstance(x, float) and isinstance(prob, float):
+		return x * prob
 	return sum(np.array(x) * np.array(prob))
 
 
 def numpy_log(
-		x: Union[float, int, Collection],
-		base: Union[float, int, Collection]) -> Union[float, Collection]:
+		x: Union[float, int, Collection], base=2):# Union[float, int, Collection]) -> Union[float, Collection]:
+	if np.log(base) == 0:
+		print('oops')
 	return np.log(x) / np.log(base)
