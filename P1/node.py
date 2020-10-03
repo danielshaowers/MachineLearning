@@ -1,4 +1,7 @@
 class Node:
+	"""A node with possibly a left and right child, internal data, and parent.
+	"""
+
 	def __init__(self, data=None, left=None, right=None, parent=None):
 		self.left = left
 		self.right = right
