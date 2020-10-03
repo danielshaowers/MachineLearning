@@ -37,13 +37,9 @@ def train_test(
 	return pred_labels, accuracy, size, first_node, depth
 
 
-def main(dataset, data_path, use_cv, max_depth, use_info_gain: int):
+def main2(exampleSet: mldata.ExampleSet, use_cv, max_depth, use_info_gain):
 	# only relevant for when we're running the experiment
 	partition_count = [3, 5, 7, 10] if use_info_gain < 0 else [1]
-	if data_path != '':
-		data = mldata.parse_c45(dataset, data_path)
-	else:
-		data = mldata.parse_c45(dataset)
 	if use_info_gain >= 1:
 		split_criteria = metrics.info_gain
 	elif use_info_gain == 0:
@@ -56,13 +52,21 @@ def main(dataset, data_path, use_cv, max_depth, use_info_gain: int):
 			print(f'\nrunning experiment with {z} partitions')
 		learner = algorithm.ID3(
 			max_depth=max_depth, split_function=split_criteria, partitions=z)
-		a, s, n, d = run(use_cv, data, learner)
+		a, s, n, d = run(use_cv, exampleSet, learner)
 		results[z] = {
 			'accuracy': a,
 			'tree_size': s,
 			'first_node': n,
 			'depth': d}
 	return results
+
+
+def main(dataset, data_path, use_cv, max_depth, use_info_gain: int):
+	if data_path != '':
+		data = mldata.parse_c45(dataset, data_path)
+	else:
+		data = mldata.parse_c45(dataset)
+	return main2(data, use_cv, max_depth, use_info_gain)
 
 
 def run(use_cv, data, learner):
