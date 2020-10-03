@@ -85,7 +85,8 @@ def gain_ratio(
 		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable], ignoreme) -> float:
-		return info_gain(event, event_tests, given, given_tests, ignoreme) / sum([entropy(probability(event, e)) for e in event_tests])
+	return info_gain(event, event_tests, given, given_tests, ignoreme) / sum(
+		[entropy(probability(event, e)) for e in event_tests])
 
 
 	"""Computes the gain ratio over an event and given random variables.
