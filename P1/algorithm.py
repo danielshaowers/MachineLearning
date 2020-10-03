@@ -42,7 +42,7 @@ class ID3(Model):
 	def __init__(
 			self,
 			max_depth: int = 1,
-			split_function: Callable[[Any], bool] = None,
+			split_function: Callable = None,
 			partitions: int = 1):
 		"""
 		Args:
@@ -116,8 +116,7 @@ class ID3(Model):
 			data: mldata.ExampleSet,
 			parent: node.Node = None,
 			depth: int = 0,
-			partition_count: int=0) -> node.Node:
-
+			partition_count: int = 0) -> node.Node:
 
 		"""Generates a decision tree using the ID3 algorithm.
 

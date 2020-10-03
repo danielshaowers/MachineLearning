@@ -61,7 +61,7 @@ def main() -> NoReturn:
         print('<max_depth> \t\t Non-negative integer that sets the maximum')
         print('\t\t\t\t\t depth of the tree. If value is zero, you should')
         print('\t\t\t\t\t grow the full tree\n')
-        print('<use_info_gain> \t Use information gain as the split\n')
+        print('<use_info_gain> \t Use information gain as the split')
         print('\t\t\t\t\t criteria. Otherwise, use gain ratio')
         # TODO Remove before submission
         data_path = '..'
