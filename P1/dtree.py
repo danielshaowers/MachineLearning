@@ -15,7 +15,9 @@ def print_results(acc, size, depth, first_feat=None):
 	print(f'Size: {size}')
 	print(f'Maximum Depth: {depth}')
 	if first_feat is not None:
-		print(f'First Feature: {first_feat}')
+		print(f'First Feature: {first_feat.feature}')
+	elif size < 1:
+		print('First Feature: None')
 
 
 def train_test(
@@ -82,8 +84,8 @@ def run(use_cv, data, learner):
 				f'positive guesses / positive truth labels'
 				f' {sum(p) / sum(mlutil.get_labels(train))}')
 			print(p)
-			print('\n Average Metrics')
-			print('-----------------------')
+		print('\n Average Metrics')
+		print('-----------------------')
 		print_results(
 			statistics.mean(accuracies),
 			statistics.mean(tree_sizes),
