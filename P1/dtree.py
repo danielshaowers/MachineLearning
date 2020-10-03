@@ -104,8 +104,6 @@ if __name__ == "__main__":
 	try:
 		_, path, use_cv, max_depth, use_info_gain = argv
 		max_depth = int(max_depth)
-		use_cv = bool(use_cv)
-		use_info_gain = bool(use_info_gain)
 		split_path = path.split('\\')
 		dataset = split_path[-1]
 		data_path = '\\'.join(split_path[:-1])
