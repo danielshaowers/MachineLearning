@@ -35,7 +35,7 @@ class ID3(Model):
 	"""
 
 	class Metrics(str, enum.Enum):
-		FIRST_FEATURE = 'first_feature'
+		FIRST_NODE = 'first_node'
 		MAX_DEPTH = 'max_depth'
 		TREE_SIZE = 'tree_size'
 
@@ -82,7 +82,7 @@ class ID3(Model):
 		if self.model is None:
 			AttributeError(
 				'ID3 model must be trained prior to computing model metrics')
-		self.model_metrics[ID3.Metrics.FIRST_FEATURE] = self.model.data.feature
+		self.model_metrics[ID3.Metrics.FIRST_NODE] = self.model.data
 		self.model_metrics[ID3.Metrics.MAX_DEPTH] = self.model.get_max_depth()
 		self.model_metrics[ID3.Metrics.TREE_SIZE] = self.model.get_tree_size()
 
