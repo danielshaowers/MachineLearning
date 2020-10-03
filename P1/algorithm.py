@@ -39,10 +39,19 @@ class ID3(Model):
 		MAX_DEPTH = 'max_depth'
 		TREE_SIZE = 'tree_size'
 
-	def __init__(self, max_depth: int = 1, split_function: Callable = None):
+	def __init__(
+			self,
+			max_depth: int = 1,
+			split_function: Callable[[Any], bool] = None):
+		"""
+		Args:
+			max_depth: Maximum depth of the decision tree.
+			split_function: Callable that evaluates some argument to either
+				True or False.
+		"""
 		self.max_depth = max_depth
 		if split_function is None:
-			self.split_function = metrics.info_gain  # we assign the function
+			self.split_function = metrics.info_gain
 		else:
 			self.split_function = split_function
 		self.model_metrics = dict()
@@ -50,18 +59,30 @@ class ID3(Model):
 		super(ID3, self).__init__()
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
+		"""Trains the decision tree on the data using the ID3 algorithm.
+
+		Args:
+			data: Examples on which to train the decision tree.
+
+		Returns:
+			None. The trained model is stored in the ID3 object.
+		"""
 		self.model = self.id3(data)
 		self._get_model_metrics()
 
-	# return the relevant metrics to be reported
 	def _get_model_metrics(self) -> NoReturn:
+		"""Computes various metrics inherent to the trained model.
+
+		Returns:
+			None. All metrics are stored in the ID3 object.
+		"""
 		if self.model is None:
-			return
+			AttributeError(
+				'ID3 model must be trained prior to computing model metrics')
 		self.model_metrics[ID3.Metrics.FIRST_FEATURE] = self.model.data.feature
 		self.model_metrics[ID3.Metrics.MAX_DEPTH] = self.model.get_max_depth()
 		self.model_metrics[ID3.Metrics.TREE_SIZE] = self.model.get_tree_size()
 
-	# return predicted labels given an example set using this tree's class
 	def predict(self, data: mldata.ExampleSet) -> Tuple:
 		if self.model is None:
 			predictions = tuple()
