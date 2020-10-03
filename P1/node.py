@@ -1,3 +1,6 @@
+from collections import Counter
+
+
 class Node:
 	"""A node with possibly a left and right child, internal data, and parent.
 	"""
@@ -23,6 +26,18 @@ class Node:
 		if self.has_right_child():
 			depth = max(self.right.get_max_depth(depth + 1), depth)
 		return depth
+
+	def main_leaf_vals(self):
+		myvals = self.get_leaf_vals([0])
+		return Counter(myvals).most_common()
+
+	def get_leaf_vals(self, leaves) -> list:
+		if self.has_left_child():
+			leaves = leaves + self.left.get_leaf_vals(leaves)
+		if self.has_right_child():
+			leaves = leaves + self.right.get_leaf_vals(leaves)
+		if self.is_leaf():
+			return [self.data]
 
 	def get_tree_size(self, tree_size: int = 1) -> int:
 		if self.has_left_child():

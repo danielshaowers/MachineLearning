@@ -42,7 +42,8 @@ class ID3(Model):
 	def __init__(
 			self,
 			max_depth: int = 1,
-			split_function: Callable[[Any], bool] = None):
+			split_function: Callable[[Any], bool] = None,
+			partitions: int = 1):
 		"""
 		Args:
 			max_depth: Maximum depth of the decision tree.
@@ -50,6 +51,7 @@ class ID3(Model):
 				True or False.
 		"""
 		self.max_depth = max_depth
+		self.partitions = partitions
 		if split_function is None:
 			self.split_function = metrics.info_gain
 		else:
@@ -68,6 +70,7 @@ class ID3(Model):
 			None. The trained model is stored in the ID3 object.
 		"""
 		self.model = self.id3(data)
+		result = self.model.main_leaf_vals()
 		self._get_model_metrics()
 
 	def _get_model_metrics(self) -> NoReturn:
@@ -112,7 +115,10 @@ class ID3(Model):
 			self,
 			data: mldata.ExampleSet,
 			parent: node.Node = None,
-			depth: int = 0) -> node.Node:
+			depth: int = 0,
+			partition_count: int=0) -> node.Node:
+
+
 		"""Generates a decision tree using the ID3 algorithm.
 
 			Args:
@@ -147,10 +153,10 @@ class ID3(Model):
 		feature_exs = mlutil.get_feature_examples(data)
 		split_tests = mlutil.create_all_split_tests(data)
 		l_type = mlutil.get_label_info(data).type
-		label_tests = mlutil.create_split_tests(labels, l_type, as_tuple=False)
+		label_tests = mlutil.create_split_tests(labels, l_type, as_tuple=True)
 		# finds the information gain or gain ratio of each test
 		split_values = [[
-			self.split_function(labels, label_tests, f, [t])
+			self.split_function(labels, label_tests, f, [t], self.partitions)
 			# get the tests for the ith feature
 			for t in split_tests[i]] for i, f in enumerate(feature_exs)]
 		i_max_feature = int(np.argmax([max(v) for v in split_values]))

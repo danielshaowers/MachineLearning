@@ -20,7 +20,7 @@ is used at least once
 
 # shuffle the training data into n blocks with a random number of additional
 # units from other blocks
-def shuffle_blocks(labels: Iterable, blocks: int):
+def shuffle_blocks(labels: Iterable, blocks):
 	pos_lab = find_indices(labels, lambda y: y > 0)
 	neg_lab = find_indices(labels, lambda y: y <= 0)
 	pos_per_fold, pos_remainder = divmod(len(pos_lab), blocks)
@@ -84,7 +84,10 @@ def gain_ratio(
 		event: Collection,
 		event_tests: Collection[Callable],
 		given: Collection,
-		given_tests: Collection[Callable]) -> float:
+		given_tests: Collection[Callable], ignoreme) -> float:
+		return info_gain(event, event_tests, given, given_tests, ignoreme) / sum([entropy(probability(event, e)) for e in event_tests])
+
+
 	"""Computes the gain ratio over an event and given random variables.
 
 	Tests that evaluate event values and given values are used to compute the
@@ -105,15 +108,13 @@ def gain_ratio(
 	Returns:
 		Gain ratio of the event and a given random variable.
 	"""
-	given_entropy = sum(entropy(probability(event, e)) for e in event_tests)
-	return info_gain(event, event_tests, given, given_tests) / given_entropy
 
 
 def info_gain(
 		event: Collection,
 		event_tests: Collection[Callable],
 		given: Collection,
-		given_tests: Collection[Callable]) -> float:
+		given_tests: Collection[Callable], ignoreme) -> float:
 	"""Computes the information gain over an event and given random variables.
 
 	Tests that evaluate event values and given values are used to compute the
