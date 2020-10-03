@@ -45,13 +45,19 @@ def main(dataset, data_path, use_cv, max_depth, use_info_gain: int):
 		split_criteria = metrics.gain_ratio
 	else:
 		split_criteria = metrics.stochastic_information_gain
-
+	results = dict()
 	for z in partition_count:  # run the experiment
 		if len(partition_count) > 1:
 			print(f'\nrunning experiment with {z} partitions')
 		learner = algorithm.ID3(
 			max_depth=max_depth, split_function=split_criteria, partitions=z)
-		run(use_cv, data, learner)
+		a, s, n, d = run(use_cv, data, learner)
+		results[z] = {
+			'accuracy': a,
+			'tree_size': s,
+			'first_node': n,
+			'depth': d}
+	return results
 
 
 def run(use_cv, data, learner):
