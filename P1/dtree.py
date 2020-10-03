@@ -40,7 +40,10 @@ def train_test(
 def main(dataset, data_path, use_cv, max_depth, use_info_gain: int):
 	# only relevant for when we're running the experiment
 	partition_count = [3, 5, 7, 10] if use_info_gain < 0 else [1]
-	data = mldata.parse_c45(dataset, data_path)
+	if data_path != '':
+		data = mldata.parse_c45(dataset, data_path)
+	else:
+		data = mldata.parse_c45(dataset)
 	if use_info_gain >= 1:
 		split_criteria = metrics.info_gain
 	elif use_info_gain == 0:
@@ -104,6 +107,7 @@ if __name__ == "__main__":
 	try:
 		_, path, use_cv, max_depth, use_info_gain = argv
 		max_depth = int(max_depth)
+		use_info_gain = int(use_info_gain)
 		split_path = path.split('\\')
 		dataset = split_path[-1]
 		data_path = '\\'.join(split_path[:-1])
