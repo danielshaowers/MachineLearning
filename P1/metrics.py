@@ -28,7 +28,7 @@ def shuffle_blocks(labels: Iterable, blocks):
 
 	random.shuffle(pos_lab)
 	random.shuffle(neg_lab)
-	data = []
+	data = [None]*blocks
 	pos_lab_copy = copy.deepcopy(pos_lab)
 	neg_lab_copy = copy.deepcopy(neg_lab)
 	# how many additional examples we want not in the block per pos lab and
@@ -36,23 +36,21 @@ def shuffle_blocks(labels: Iterable, blocks):
 	additional_pos = round(pos_per_fold * blocks / 2)
 	additional_neg = round(neg_per_fold * blocks / 2)
 
-	for x in range(blocks):
+	for y in range(blocks):
 		pos_count = pos_per_fold + min(1, pos_remainder)
 		neg_count = neg_per_fold + min(1, neg_remainder)
 		pos_remainder = max(0, pos_remainder - 1)
 		neg_remainder = max(0, neg_remainder - 1)
-		data[x] = [pos_lab[:pos_count] + neg_lab[:neg_count]]
+		data[y] = pos_lab[:pos_count] + neg_lab[:neg_count]
 		del pos_lab[:pos_count]
 		del neg_lab[:neg_count]
-		pos_pool = [x for x in pos_lab_copy if x not in data[x]]  # get pool
-		# of positives and pool of negatives that aren't in data[x]
-		neg_pool = [x for x in neg_lab_copy if x not in data[x]]
+		pos_pool = [x for x in pos_lab_copy if x not in data[y]]  # get pool of positives and pool of negatives that aren't in data[x]
+		neg_pool = [x for x in neg_lab_copy if x not in data[y]]
 		pos_deck = list(range(len(pos_pool)))
 		neg_deck = list(range(len(neg_pool)))
 		random.shuffle(pos_deck)
 		random.shuffle(neg_deck)
-		data[x] = [
-			data[x] + pos_deck[:additional_pos] + neg_deck[:additional_neg]]
+		data[y] = data[y] + pos_deck[:additional_pos] + neg_deck[:additional_neg]
 	return data  # indices indicating which for each block
 
 
@@ -65,14 +63,16 @@ def stochastic_information_gain(
 		partitions: int = 5) -> float:
 	listed_indices = shuffle_blocks(event, partitions)
 	ig = []
-	for i in range(listed_indices):
-		subset_feats = given[listed_indices[i]]
-		subset_labels = event[listed_indices[i]]
+	for i in range(len(listed_indices)):
+		subset_feats = [given[g] for g in listed_indices[i]]
+		subset_labels = [event[g] for g in listed_indices[i]]
 		# if use_ig:
 		#	ig[i] = info_gain(subset_labels, subset_feats)
 		# else:
-		ig.append(
-			gain_ratio(subset_labels, event_tests, given_tests, subset_feats))
+		try:
+			ig.append(gain_ratio(subset_labels, event_tests, subset_feats, given_tests, 1))
+		except:
+			given
 	return statistics.mean(ig)
 
 
@@ -85,8 +85,7 @@ def gain_ratio(
 		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable], ignoreme) -> float:
-	return info_gain(event, event_tests, given, given_tests, ignoreme) / sum(
-		[entropy(probability(event, e)) for e in event_tests])
+	return info_gain(event, event_tests, given, given_tests, ignoreme) / sum([entropy(probability(event, e)) for e in event_tests])
 
 
 	"""Computes the gain ratio over an event and given random variables.
