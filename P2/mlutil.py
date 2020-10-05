@@ -221,8 +221,10 @@ def is_homogeneous(data: mldata.ExampleSet) -> bool:
 def get_majority_label(data: mldata.ExampleSet):
 	return Counter(get_labels(data)).most_common(1)[0][0]
 
+
 def print_label_ratio(data: mldata.ExampleSet):
 	print(Counter(get_labels(data)).most_common())
+
 
 def get_feature_index(data: mldata.ExampleSet, feature: mldata.Feature) -> int:
 	return data.schema.index(feature)
