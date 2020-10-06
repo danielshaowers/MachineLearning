@@ -1,9 +1,9 @@
-from P2 import mldata
+import mldata
 
-from algorithm import Model
+import model
 
 
-class NaiveBayes(Model):
+class NaiveBayes(model.Model):
 
 	def __init__(self):
 		# Add any additional model parameters
