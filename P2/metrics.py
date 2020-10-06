@@ -68,11 +68,12 @@ def stochastic_information_gain(
 		subset_feats = [given[g] for g in listed_indices[i]]
 		subset_labels = [event[g] for g in listed_indices[i]]
 		# if use_ig:
-		#	ig[i] = info_gain(subset_labels, subset_feats)
+		# 	ig[i] = info_gain(subset_labels, subset_feats)
 		# else:
 		try:
-			ig.append(gain_ratio(subset_labels, event_tests, subset_feats,
-								 given_tests, 1))
+			ig.append(
+				gain_ratio(
+					subset_labels, event_tests, subset_feats, given_tests, 1))
 		except:
 			given
 	return statistics.mean(ig)
@@ -196,9 +197,11 @@ def entropy(prob: float, base=2) -> float:
 
 def probability(
 		event: Collection,
-		event_test: Callable = None,
+		event_test: Callable[[Any], bool] = None,
 		given: Collection = None,
-		given_test: Callable = None) -> Union[float, Mapping[Any, float]]:
+		given_test: Callable[[Any], bool] = None,
+		m: float = 0,
+		p: float = 0) -> Union[float, Mapping[Any, float]]:
 	"""Computes either the unconditional or conditional probability.
 
 	If only the event is specified, the probability of each value it takes on
@@ -208,15 +211,27 @@ def probability(
 	A similar procedure is followed for all possible combinations of event,
 	event test, given, and given test.
 
+	m-estimates can be applied to the conditional probability calculation.
+	The default values of m and p are 0 so the empirical estimate is
+	computed. To apply Laplace smoothing, let v be the number of distinct
+	values the event takes on. Then let m = v and p = 1 / v.
+
 	Args:
 		event: Collection of values representing the event random variable.
 		event_test: Test on which to evaluate each value of event.
 		given: Collection of values representing the given random variable.
 		given_test: Test on which to evaluate each value of given.
+		m: "Equivalent sample size" which determines the important of p
+			relative to the observations.
+		p: Prior estimate of the probability.
 
 	Returns:
 		A dictionary of probabilities or a single float probability.
 	"""
+
+	def conditional(joint_freq, given_freq):
+		return (joint_freq + m * p) / (given_freq + m)
+
 	# Default probability of something not in the dictionary is 0.0.
 	pr = collections.defaultdict(float)
 	if event_test is None:
@@ -225,35 +240,26 @@ def probability(
 	else:
 		pr = sum(map(event_test, event)) / len(event)
 	if given is not None:
-		# To consider event and given that are not of the same length.
-		min_len = min(len(event), len(given))
 		g_counts = collections.Counter(given)
-		pr_g = collections.defaultdict(float)
-		pr_g.update({g: freq / len(given) for g, freq in g_counts.items()})
-		joint_events = [(e, g) for e, g in zip(event, given)]
-		joint_counts = collections.Counter(joint_events)
+		joint = [(e, g) for e, g in zip(event, given)]
+		joint_counts = collections.Counter(joint)
+		pr.clear()
 		if given_test is None:
-			pr.clear()
 			if event_test is None:
 				pr.update({
-					eg: (freq / min_len) / pr_g[eg[1]]
+					eg: conditional(freq, g_counts[eg[1]])
 					for eg, freq in joint_counts.items()})
 			else:
 				pr.update({
-					eg: (freq / min_len) / pr_g[eg[1]]
-					for eg, freq in joint_counts.items() if
-					event_test(eg[0])})
+					eg: conditional(freq, g_counts[eg[1]])
+					for eg, freq in joint_counts.items() if event_test(eg[0])})
 		else:
 			if event_test is None:
-				pr.clear()
 				pr.update({
-					eg: (freq / min_len) / pr_g[eg[1]]
-					for eg, freq in joint_counts.items() if
-					given_test(eg[1])})
+					eg: conditional(freq, g_counts[eg[1]])
+					for eg, freq in joint_counts.items() if given_test(eg[1])})
 			else:
 				eg_freq = sum(
-					1 for e, g in joint_events
-					if event_test(e) and given_test(g))
-				# Pr(Y, X) / Pr(X) = Pr(Y|X)
-				pr = (eg_freq / min_len) / pr if pr != 0 else 0
+					1 for e, g in joint if event_test(e) and given_test(g))
+				pr = conditional(eg_freq, min(len(event), len(given)))
 	return pr
