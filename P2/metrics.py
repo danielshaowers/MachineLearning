@@ -51,7 +51,8 @@ def shuffle_blocks(labels: Iterable, blocks):
 		neg_deck = list(range(len(neg_pool)))
 		random.shuffle(pos_deck)
 		random.shuffle(neg_deck)
-		data[y] = data[y] + pos_deck[:additional_pos] + neg_deck[:additional_neg]
+		data[y] = data[y] + pos_deck[:additional_pos] + neg_deck[
+														:additional_neg]
 	return data  # indices indicating which for each block
 
 
@@ -233,9 +234,9 @@ def probability(
 		return (joint_freq + m * p) / (given_freq + m)
 
 	# Default probability of something not in the dictionary is 0.0.
-	pr = collections.defaultdict(float)
 	if event_test is None:
 		counts = collections.Counter(event)
+		pr = collections.defaultdict(float)
 		pr.update({e: freq / len(event) for e, freq in counts.items()})
 	else:
 		pr = sum(map(event_test, event)) / len(event)
@@ -243,8 +244,8 @@ def probability(
 		g_counts = collections.Counter(given)
 		joint = [(e, g) for e, g in zip(event, given)]
 		joint_counts = collections.Counter(joint)
-		pr.clear()
 		if given_test is None:
+			pr = collections.defaultdict(float)
 			if event_test is None:
 				pr.update({
 					eg: conditional(freq, g_counts[eg[1]])
@@ -255,11 +256,12 @@ def probability(
 					for eg, freq in joint_counts.items() if event_test(eg[0])})
 		else:
 			if event_test is None:
+				pr.clear()
 				pr.update({
 					eg: conditional(freq, g_counts[eg[1]])
 					for eg, freq in joint_counts.items() if given_test(eg[1])})
 			else:
 				eg_freq = sum(
 					1 for e, g in joint if event_test(e) and given_test(g))
-				pr = conditional(eg_freq, min(len(event), len(given)))
+				pr = conditional(eg_freq, sum(map(event_test, event)))
 	return pr
