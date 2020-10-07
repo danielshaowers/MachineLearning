@@ -1,6 +1,6 @@
 import random
 from sys import argv
-
+import numpy as np
 from P2 import mldata, mlutil
 
 
@@ -8,9 +8,7 @@ def mainm(dataset, data_path, use_cv, max_depth, use_info_gain: int):
     # only relevant for when we're running the experiment
     data = mldata.parse_c45(dataset, data_path)
     npdata = mlutil.convert_to_numpy(data)
-
-
-
+    labels = np.array(mlutil.get_labels(data))
 if __name__ == "__main__":
     random.seed(a=12345)
 try:
