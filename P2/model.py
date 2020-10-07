@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from P2 import mldata
+import mldata
 
 
 class Model(ABC):

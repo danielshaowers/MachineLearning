@@ -2,7 +2,7 @@ import functools
 import operator
 from collections import Counter
 from numbers import Number
-from typing import Any, Callable, Generator, Iterable, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Union
 
 import mldata
 
@@ -140,7 +140,8 @@ def get_features(
 def get_feature_examples(
 		data: mldata.ExampleSet,
 		start_index: int = 1,
-		as_tuple: bool = True) -> Union[Tuple, Generator]:
+		as_tuple: bool = True,
+		as_dict: bool = False) -> Union[Tuple, Dict, Generator]:
 	"""Retrieves all values on a per-feature basis.
 
 	The examples of a feature can be considered a column of the ExampleSet.
@@ -157,10 +158,20 @@ def get_feature_examples(
 		A tuple of tuples or generator of generators in which each represents
 		all the values of a given feature.
 	"""
+
 	examples = (
 		(data[e][f] for e in range(len(data)))
 		for f in range(start_index, len(data.schema) - 1))
-	return tuple(tuple(ex) for ex in examples) if as_tuple else examples
+	if as_tuple and not as_dict:
+		examples = tuple(tuple(ex) for ex in examples)
+	if as_dict:
+		features = get_features_info(data)[start_index - 1:]
+		if as_tuple:
+			# get_features_info() already accounts for removing ID feature
+			examples = {f: tuple(ex) for f, ex in zip(features, examples)}
+		else:
+			examples = {f: ex for f, ex in zip(features, examples)}
+	return examples
 
 
 def get_labels(

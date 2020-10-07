@@ -1,4 +1,5 @@
-from typing import Sequence, Tuple
+import functools
+from typing import Callable, Sequence, Tuple
 
 import numpy as np
 
@@ -10,62 +11,60 @@ import model
 
 class NaiveBayes(model.Model):
 
-	def __init__(self, k_bins: int = 2, use_laplace_smoothing: bool = False):
+	def __init__(self, n_bins: int = 2, use_laplace_smoothing: bool = False):
 		super(NaiveBayes, self).__init__()
-		if k_bins < 2:
+		if n_bins < 2:
 			raise ValueError("""k_bins must be at least 2 to discretize 
 			continuous features""")
-		self.k_bins = k_bins
+		self.n_bins = n_bins
 		self.use_laplace_smoothing = use_laplace_smoothing
-		self.quantiles = None
+		self.binners = dict()
 		self.params = None
 
 	def predict(self, data: mldata.ExampleSet):
 		pass
 
 	def train(self, data: mldata.ExampleSet):
-		feature_array, label_array = self.preprocess(data)
-		self._naive_bayes(feature_array, label_array)
+		self.preprocess(data)
+		self._naive_bayes(data)
 
 	def _naive_bayes(self, data: mldata.ExampleSet):
+		params = dict()
 		labels = mlutil.get_labels(data)
-		label_tests = mlutil.create_discrete_split_tests(labels)
-		label_probs = metrics.probability(labels)
-		"""
-		For each feature (all categorical after "quantilization")...
-			compute probability for each combination of label and feature
-			record as parameter of the naive bayes model
-		"""
+		label_info = mlutil.get_label_info(data)
+		params[label_info] = metrics.probability(labels)
+		feature_examples = mlutil.get_feature_examples(data, as_dict=True)
+		for feature, examples in feature_examples.items():
+			exs = examples
+			if feature.type is feature.Type.CONTINUOUS:
+				binner = self.binners[feature]
+				exs = binner(examples)
+			# TODO Maybe clean this up -- namedtuple or class?
+			# 	To get parameter: self.params[feature][(value, label)]
+			if self.use_laplace_smoothing:
+				m = len(set(exs))
+				p = 1 / m
+				pr = metrics.probability(event=exs, given=labels, m=m, p=p)
+			else:
+				pr = metrics.probability(event=exs, given=labels)
+			params[feature] = pr
+		self.params = params
 
 	def preprocess(self, data: mldata.ExampleSet):
-		# Prevent pre-processing again; self.quantiles is "final"
-		if self.quantiles is not None:
-			return
-		else:
-			self.quantiles = dict()
-		features_info = mlutil.get_features_info(data, as_tuple=False)
-		continuous_features = (
-			(i, f) for i, f in enumerate(features_info)
-			if f.type == mldata.Feature.Type.CONTINUOUS)
-		feature_array, label_array = self.get_feature_label_split(data)
-		for i, f in continuous_features:
-			# Feature array does not include ID feature
-			f_values = feature_array[:, i + 1]
-			# Quantiles are analogous to partitions
-			n_quantiles = self.k_bins - 1
-			quantiles, quantilized = self.quantilize(f_values, n_quantiles)
-			# Store for lookup later when predicting
-			self.quantiles[f] = quantiles
-			feature_array[:, i] = np.array(quantilized)
-		return feature_array, label_array
+		f_exs = mlutil.get_feature_examples(data, as_dict=True)
+		self.binners = {
+			f: self.train_binner(ex) for f, ex in f_exs.items()
+			if f.type == mldata.Feature.Type.CONTINUOUS
+		}
 
-	@staticmethod
-	def get_feature_label_split(data: mldata.ExampleSet):
-		data_array = np.array(data.to_float())[1:]
-		feature_array = data_array[:, :-1]
-		label_array = data_array[::, -1]
-		return feature_array, label_array
+	# TODO Wait until done to see if we can use this
+	def train_binner(self, values: Sequence) -> Callable:
+		mx = max(values)
+		mn = min(values)
+		splits = np.arange(mn, mx, (mx - mn) / self.n_bins)
+		return functools.partial(lambda to_bin: np.digitize(to_bin, splits))
 
+	# TODO Maybe use for research extension?
 	@staticmethod
 	def quantilize(values: Sequence, n: int = 2) -> Tuple:
 		quantiles = NaiveBayes.compute_quantiles(values, n)
@@ -83,3 +82,9 @@ class NaiveBayes(model.Model):
 			raise ValueError('n must be at least 2')
 		return tuple(
 			np.quantile(values, q=(quant + 1) / n) for quant in range(n - 1))
+
+
+if __name__ == '__main__':
+	data = mldata.parse_c45('spam', '..')
+	nb = NaiveBayes()
+	nb.train(data)
