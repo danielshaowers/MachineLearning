@@ -202,7 +202,8 @@ def probability(
 		given: Collection = None,
 		given_test: Callable[[Any], bool] = None,
 		m: float = 0,
-		p: float = 0) -> Union[float, Mapping[Any, float]]:
+		p: float = 0,
+		log_base: float = None) -> Union[float, Mapping[Any, float]]:
 	"""Computes either the unconditional or conditional probability.
 
 	If only the event is specified, the probability of each value it takes on
@@ -231,15 +232,24 @@ def probability(
 	"""
 
 	def conditional(joint_freq, given_freq):
-		return (joint_freq + m * p) / (given_freq + m)
+		cond = (joint_freq + m * p) / (given_freq + m)
+		return cond if log_base is None else math.log(cond, log_base)
 
 	# Default probability of something not in the dictionary is 0.0.
 	if event_test is None:
 		counts = collections.Counter(event)
 		pr = collections.defaultdict(float)
-		pr.update({e: freq / len(event) for e, freq in counts.items()})
+		if log_base is None:
+			pr.update({e: freq / len(event) for e, freq in counts.items()})
+		else:
+			pr.update({
+				e: math.log(freq / len(event), log_base)
+				for e, freq in counts.items()
+			})
 	else:
 		pr = sum(map(event_test, event)) / len(event)
+		if log_base is not None:
+			pr = math.log(pr, log_base)
 	if given is not None:
 		g_counts = collections.Counter(given)
 		joint = [(e, g) for e, g in zip(event, given)]
