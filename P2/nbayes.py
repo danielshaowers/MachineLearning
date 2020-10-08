@@ -36,6 +36,7 @@ class NaiveBayes(model.Model):
 				# For each class label, sum all probabilities that correspond
 				# to the values of the example
 				# TODO Double check (e, c) -- do we want Pr(event|given)?
+				# TODO Still need to add Pr(C) for class label
 				(c, sum(self.params[f][(e, c)] for e, f in zip(ex, f_info)))
 				for c in self.params[label_info]
 			]
