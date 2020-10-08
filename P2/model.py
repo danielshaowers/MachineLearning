@@ -1,9 +1,11 @@
-from abc import ABC, abstractmethod
+import abc
+import dataclasses
+from typing import Any
 
 import mldata
 
 
-class Model(ABC):
+class Model(abc.ABC):
 	"""An abstract machine learning model.
 
 	A model is trainable on a given ExampleSet and can subsequently predict
@@ -14,10 +16,21 @@ class Model(ABC):
 	def __init__(self):
 		super(Model, self).__init__()
 
-	@abstractmethod
+	@abc.abstractmethod
 	def train(self, data: mldata.ExampleSet):
 		pass
 
-	@abstractmethod
+	@abc.abstractmethod
 	def predict(self, data: mldata.ExampleSet):
 		pass
+
+
+@dataclasses.dataclass(frozen=True)
+class Prediction:
+	value: Any
+	confidence: float
+
+	def __post_init__(self):
+		if self.confidence < 0 or 1 < self.confidence:
+			raise ValueError("""Confidence must be between 0 and 1, 
+			inclusive""")
