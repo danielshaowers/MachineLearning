@@ -32,5 +32,4 @@ class Prediction:
 
 	def __post_init__(self):
 		if self.confidence < 0 or 1 < self.confidence:
-			raise ValueError("""Confidence must be between 0 and 1, 
-			inclusive""")
+			raise ValueError('Confidence must be between 0 and 1, inclusive')

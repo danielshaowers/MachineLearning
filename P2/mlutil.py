@@ -2,7 +2,9 @@ import functools
 import operator
 from collections import Counter
 from numbers import Number
-from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Union
+from typing import Any, Callable, Collection, Dict, Generator, Iterable, \
+	Tuple, \
+	Union
 
 import numpy as np
 
@@ -142,8 +144,10 @@ def get_example_features(
 def get_feature_examples(
 		data: mldata.ExampleSet,
 		start_index: int = 1,
+		feature_types: Collection[mldata.Feature.Type] = None,
 		as_tuple: bool = True,
-		as_dict: bool = False) -> Union[Tuple, Dict, Generator]:
+		as_dict: bool = False,
+		index_as_key: bool = False) -> Union[Tuple, Dict, Generator]:
 	"""Retrieves all values on a per-feature basis.
 
 	The examples of a feature can be considered a column of the ExampleSet.
@@ -153,26 +157,45 @@ def get_feature_examples(
 		start_index: Index of the starting feature. The default value of 1
 			assumes the first feature of the ExampleSet is the identifier
 			feature, which is not meaningful when performing classification.
-		as_tuple: True will return the iterable as a tuple, and as a
-			generator otherwise.
-
+		feature_types: Types of features to include. If None, both continuous
+			and discrete types will be included.
+		as_tuple: True will return the examples as a tuple. If as_dict is
+			False, then the returned result will be a tuple of tuples,
+			where each tuple is feature. If both as_tuple and as_dict are
+			False, then what is returned is a generator of generators.
+		as_dict: True will return a dictionary with the feature (object or
+			index in schema, see index_as_key) as the key and the examples as
+			the value. If as_tuple is True, the values will be a tuple,
+			instead of a generator.
+		index_as_key: If True, use the feature index in the ExampleSet schema,
+			instead of the feature object.
 	Returns:
-		A tuple of tuples or generator of generators in which each represents
-		all the values of a given feature.
+		A tuple of tuples, generator of generators, dictionary of tuples,
+		or dictionary of generators of examples, grouped by feature.
 	"""
-
+	# get_features_info() already accounts for removing ID feature
+	f_info = get_features_info(data)[start_index - 1:]
+	if feature_types is None:
+		f_idx = {i for i, f in enumerate(f_info)}
+	else:
+		f_idx = {i for i, f in enumerate(f_info) if f.type in feature_types}
 	examples = (
-		(data[e][f] for e in range(len(data)))
+		(data[e][f] for e in range(len(data)) if f in f_idx)
 		for f in range(start_index, len(data.schema) - 1))
-	if as_tuple and not as_dict:
-		examples = tuple(tuple(ex) for ex in examples)
-	if as_dict:
-		features = get_features_info(data)[start_index - 1:]
-		if as_tuple:
-			# get_features_info() already accounts for removing ID feature
-			examples = {f: tuple(ex) for f, ex in zip(features, examples)}
+	if as_tuple:
+		if as_dict:
+			if index_as_key:
+				examples = {i: tuple(ex) for i, ex in zip(f_idx, examples)}
+			else:
+				examples = {f: tuple(ex) for f, ex in zip(f_info, examples)}
 		else:
-			examples = {f: ex for f, ex in zip(features, examples)}
+			examples = tuple(tuple(ex) for ex in examples)
+	else:
+		if as_dict:
+			if index_as_key:
+				examples = {i: ex for i, ex in zip(f_idx, examples)}
+			else:
+				examples = {f: ex for f, ex in zip(f_info, examples)}
 	return examples
 
 
@@ -231,6 +254,15 @@ def is_homogeneous(data: mldata.ExampleSet) -> bool:
 	return len(set(get_labels(data))) == 1
 
 
+def is_continuous(feature: mldata.Feature) -> bool:
+	return feature.type is mldata.Feature.Type.CONTINUOUS
+
+
+def is_discrete(feature: mldata.Feature) -> bool:
+	return feature.type in {
+		mldata.Feature.Type.BINARY, mldata.Feature.Type.NOMINAL}
+
+
 def get_majority_label(data: mldata.ExampleSet):
 	return Counter(get_labels(data)).most_common(1)[0][0]
 
@@ -246,29 +278,31 @@ def get_feature_index(data: mldata.ExampleSet, feature: mldata.Feature) -> int:
 def get_label_info(data: mldata.ExampleSet) -> mldata.Feature:
 	return data.schema[-1]
 
+
 def quantify_nominals(data: np.array, types):
 	indices = np.where(types == 'NOMINAL')[0]
 	categories = [np.unique(data[i]) for i in indices]
 	quantified = np.ndarray([len(data), len(data[0])], dtype='int64')
-	for m,z in enumerate(indices):
+	for m, z in enumerate(indices):
 		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]]
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
-				quantified[m][id[0]] = i + 1  # avoids using 1, which is uninformative
+				quantified[m][
+					id[0]] = i + 1  # avoids using 1, which is uninformative
 	return quantified
+
 
 def convert_to_numpy(data: mldata.ExampleSet):
 	info = get_features_info(data)
 	types = np.array([n.type for n in info])
-	nparr=np.array(data).transpose()
-	nparr = nparr[1:len(nparr)-1]
+	nparr = np.array(data).transpose()
+	nparr = nparr[1:len(nparr) - 1]
 	return nparr, types
-	#names = [n.name for n in info]
-	#dtypes = [np.array(n).dtype for n in fdata]
-	#nparr = np.recarray(shape = (len(fdata)),
-	#					dtype={'names': names, 'formats': (dtypes)})
-	# len(fdata[1])
-	#for i, d in enumerate(fdata):
-	#	for ii, dd in enumerate(d):
-	#		nparr[i][ii] = dd
-
+# names = [n.name for n in info]
+# dtypes = [np.array(n).dtype for n in fdata]
+# nparr = np.recarray(shape = (len(fdata)),
+#					dtype={'names': names, 'formats': (dtypes)})
+# len(fdata[1])
+# for i, d in enumerate(fdata):
+#	for ii, dd in enumerate(d):
+#		nparr[i][ii] = dd
