@@ -1,9 +1,10 @@
 import functools
-import math
 import operator
 from collections import Counter
 from numbers import Number
-from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Union, Collection
+from typing import Any, Callable, Collection, Dict, Generator, Iterable, \
+	Tuple, \
+	Union
 
 import numpy as np
 
@@ -175,16 +176,22 @@ def get_feature_examples(
 	# get_features_info() already accounts for removing ID feature
 	f_info = get_features_info(data)[start_index - 1:]
 	if feature_types is None:
-		f_idx = {i for i, f in enumerate(f_info)}
+		f_idx = {i + 1 for i, f in enumerate(f_info)}
 	else:
-		f_idx = {i for i, f in enumerate(f_info) if f.type in feature_types}
+		f_idx = {
+			i + 1 for i, f in enumerate(f_info) if f.type in feature_types
+		}
 	examples = (
 		(data[e][f] for e in range(len(data)) if f in f_idx)
-		for f in range(start_index, len(data.schema) - 1))
+		for f in range(start_index, len(data.schema) - 1)
+	)
 	if as_tuple:
 		if as_dict:
 			if index_as_key:
-				examples = {i: tuple(ex) for i, ex in zip(f_idx, examples)}
+				examples = {
+					i + 1: tuple(ex) for i, ex in enumerate(examples)
+					if i + 1 in f_idx
+				}
 			else:
 				examples = {f: tuple(ex) for f, ex in zip(f_info, examples)}
 		else:
@@ -192,7 +199,10 @@ def get_feature_examples(
 	else:
 		if as_dict:
 			if index_as_key:
-				examples = {i: ex for i, ex in zip(f_idx, examples)}
+				examples = {
+					i + 1: ex for i, ex in enumerate(examples)
+					if i + 1 in f_idx
+				}
 			else:
 				examples = {f: ex for f, ex in zip(f_info, examples)}
 	return examples
@@ -277,7 +287,8 @@ def quantify_nominals(data: np.array, types):
 		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]]
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
-				quantified[m][id[0]] = i + 1  # avoids using 1, which is uninformative
+				quantified[m][
+					id[0]] = i + 1  # avoids using 1, which is uninformative
 	return quantified
 
 
@@ -287,14 +298,16 @@ def convert_to_numpy(data: mldata.ExampleSet):
 	nparr = np.array(data).transpose()
 	nparr = nparr[1:len(nparr) - 1]
 	return nparr, types
-	#names = [n.name for n in info]
-	#dtypes = [np.array(n).dtype for n in fdata]
-	#nparr = np.recarray(shape = (len(fdatra)),
-	#					dtype={'names': names, 'formats': (dtypes)})
-	# len(fdata[1])
-	#for i, d in enumerate(fdata):
-	#	for ii, dd in enumerate(d):
-	#		nparr[i][ii] = dd
+
+
+# names = [n.name for n in info]
+# dtypes = [np.array(n).dtype for n in fdata]
+# nparr = np.recarray(shape = (len(fdatra)),
+#					dtype={'names': names, 'formats': (dtypes)})
+# len(fdata[1])
+# for i, d in enumerate(fdata):
+#	for ii, dd in enumerate(d):
+#		nparr[i][ii] = dd
 # sorts low to high
 def compute_roc(scores, truths):
 	scores = np.array(scores)
@@ -304,59 +317,66 @@ def compute_roc(scores, truths):
 	get_ratio = lambda tpr, fpr: tpr / fpr
 	best_point = [-1, -1]
 	for i, thresh in enumerate(thresholds):
-		accuracy, precision, recall, specificity, tps = prediction_stats(scores, truths, threshold=thresh)
+		accuracy, precision, recall, specificity, tps = prediction_stats(
+			scores,
+			truths,
+			threshold=thresh)
 		tp = tps[0]
 		tn = tps[1]
 		fp = tps[2]
 		fn = tps[3]
-		coordinates[i][0] = fp / (tn + fp) #fpr
-		coordinates[i][1] = tp / (tp + fn) #tpr
+		coordinates[i][0] = fp / (tn + fp)  # fpr
+		coordinates[i][1] = tp / (tp + fn)  # tpr
 		ratio = precision / recall
 		if ratio > best_point[0]:
 			best_point[0] = ratio
 			best_point[1] = thresh
-# names = [n.name for n in info]
-# dtypes = [np.array(n).dtype for n in fdata]
-# nparr = np.recarray(shape = (len(fdata)),
-#					dtype={'names': names, 'formats': (dtypes)})
-# len(fdata[1])
-# for i, d in enumerate(fdata):
-#	for ii, dd in enumerate(d):
-#		nparr[i][ii] = dd
+	# names = [n.name for n in info]
+	# dtypes = [np.array(n).dtype for n in fdata]
+	# nparr = np.recarray(shape = (len(fdata)),
+	#					dtype={'names': names, 'formats': (dtypes)})
+	# len(fdata[1])
+	# for i, d in enumerate(fdata):
+	#	for ii, dd in enumerate(d):
+	#		nparr[i][ii] = dd
 
 	# now we have all the tpr's and fpr's for every threshold
 	# next compute area underneath by trapezoidal area approximation
 	auc = 0
 	end_x = 1
 	end_y = 1
-	coordinates[len(coordinates) - 1] = [0,0] # edge case
+	coordinates[len(coordinates) - 1] = [0, 0]  # edge case
 	# todo: compare to built in function
 	for i, coord in enumerate(coordinates):
 		start_x = coord[0]
 		start_y = coord[1]
-		auc = auc + (end_x - start_x) * ((start_y + end_y) / 2) # get area of trapezoidal region
+		auc = auc + (end_x - start_x) * (
+				(start_y + end_y) / 2)  # get area of trapezoidal region
 		end_x = start_x
 		end_y = start_y
 	return auc, best_point[1]
 
-def prediction_stats (scores=None, truths=None, predictions: Collection[Iterable]=None, threshold=0.5):
+
+def prediction_stats(scores=None, truths=None,
+					 predictions: Collection[Iterable] = None, threshold=0.5):
 	if predictions is not None:
 		scores = np.array([p.confidence for p in predictions])
 		truths = np.array([t.value for t in predictions])
 	predicted_labels = scores >= threshold
 	tp, tn, fp, fn = compute_tf_fp(predicted_labels, truths)
 	accuracy = sum(predicted_labels == truths) / len(truths)
-	precision =  tp/(tp+fp)
-	recall = tp/(tp+fn)
-	specificity =tn/sum(truths == 0)
+	precision = tp / (tp + fp)
+	recall = tp / (tp + fn)
+	specificity = tn / sum(truths == 0)
 	return accuracy, precision, recall, specificity, [tp, tn, fp, fn]
+
 
 # compute true pos, false pos, true neg, false neg
 def compute_tf_fp(predicted_labels: np.array, truths: np.array):
 	pos_truths = np.where(truths > 0)[0]
 	neg_truths = np.where(truths <= 0)[0]
 	tp = np.sum([1 for e in pos_truths if predicted_labels[e] == 1])
-	tn =  np.sum([1 for i in neg_truths if predicted_labels[i] == 0])
+	tn = np.sum([1 for i in neg_truths if predicted_labels[i] == 0])
 	fp = np.sum([1 for e in neg_truths if predicted_labels[e] == 1])
 	fn = np.sum([1 for e in pos_truths if predicted_labels[e] == 0])
 	return tp, tn, fp, fn
