@@ -1,4 +1,5 @@
 import functools
+import math
 import operator
 from collections import Counter
 from numbers import Number
@@ -277,18 +278,31 @@ def compute_roc(scores, truths):
 	truths = np.array(truths)
 	thresholds = np.unique(scores)
 	coordinates = np.zeros([len(np.unique(scores)), 2])
+	get_ratio = lambda tpr, fpr: tpr / fpr
+	best_point = [-1, -1]
 	for i, thresh in enumerate(thresholds):
 		tp, tn, fp, fn = compute_tf_fp(scores >= thresh, truths)
-		coordinates[i,0] = fp / (tn + fp) #fpr
-		coordinates[i,1] = tp / (tp + fn) #tpr
+		coordinates[i][0] = fp / (tn + fp) #fpr
+		coordinates[i][1] = tp / (tp + fn) #tpr
+		ratio = get_ratio(coordinates[i][1], coordinates[i][0])
+		if ratio > best_point[0]:
+			best_point[0] = ratio
+			best_point[1] = thresh
+
 	# now we have all the tpr's and fpr's for every threshold
 	# next compute area underneath by trapezoidal area approximation
-	num_partitions = 
-
-
-
-
-	return None, None
+	auc = 0
+	end_x = 1
+	end_y = 1
+	coordinates[len(coordinates) - 1] = [0,0] # edge case
+	# todo: compare to built in function
+	for i, coord in enumerate(coordinates):
+		start_x = coord[0]
+		start_y = coord[1]
+		auc = auc + (end_x - start_x) * ((start_y + end_y) / 2) # get area of trapezoidal region
+		end_x = start_x
+		end_y = start_y
+	return auc, best_point[1]
 
 def prediction_stats(scores=None, truths=None, predictions: Collection[Iterable]=None, threshold=0.5):
 	if predictions is not None:
@@ -305,8 +319,8 @@ def prediction_stats(scores=None, truths=None, predictions: Collection[Iterable]
 
 # compute true pos, false pos, true neg, false neg
 def compute_tf_fp(predicted_labels: np.array, truths: np.array):
-	tp = predicted_labels + truths == 2
-	tn = predicted_labels + truths == 0
+	tp = np.sum([1 for i,e in enumerate(truths) if e==1 and predicted_labels[i] == 1])
+	tn =  np.sum([1 for i,e in enumerate(truths) if e==0 and predicted_labels[i] == 0])
 	fp = np.sum([predicted_labels[e[0]] for e in np.argwhere(truths == 0)])
-	fn = np.sum([~predicted_labels[e[0]] + 1 for e in np.argwhere(truths == 1)])
+	fn = np.sum([~predicted_labels[e[0]] for e in np.argwhere(truths == 1)])
 	return tp, tn, fp, fn
