@@ -4,13 +4,19 @@ import numpy as np
 from P2 import mldata, mlutil, logreg
 
 
-def mainm(dataset, data_path, use_cv, max_depth, use_info_gain: int):
+def mainm(dataset, data_path, use_cv, max_depth, use_logreg: int):
     # only relevant for when we're running the experiment
+    #todo: run nested cross validation to identify optimal threshold, or have a separate validation set within the training set
     data = mldata.parse_c45(dataset, data_path)
-    npdata = mlutil.convert_to_numpy(data)
-    labels = np.array(mlutil.get_labels(data))
-    learner = logreg.LogisticRegression()
-    weights = learner.train(data, labels)
+    if use_logreg:
+        npdata = mlutil.convert_to_numpy(data)
+        labels = np.array(mlutil.get_labels(data))
+        learner = logreg.LogisticRegression()
+        weights = learner.train(data, labels)
+        predictions, scores = learner.predict(data)
+        accuracy, precision, recall, specificity, x= mlutil.prediction_stats(scores=scores, truths=labels, threshold=0.5)
+        auc, best_thresh = mlutil.compute_roc(scores, labels)
+        print('accuracy=' + str(accuracy) + "\nAUC=" + str(auc) + "\nbest_threshold=" + str(best_thresh))
 if __name__ == "__main__":
     random.seed(a=12345)
 try:
@@ -42,8 +48,8 @@ except ValueError:
     dataset = 'voting'
     use_cv = True
     max_depth = 1
-    use_info_gain = 0
+    use_log_reg = 1
     max_depth = int(max_depth)
     use_cv = bool(use_cv)
-    use_info_gain = bool(use_info_gain)
-    mainm(dataset, data_path, use_cv, max_depth, use_info_gain)
+    use_log_reg = bool(use_log_reg)
+    mainm(dataset, data_path, use_cv, max_depth, use_log_reg)

@@ -1,10 +1,9 @@
 import functools
+import math
 import operator
 from collections import Counter
 from numbers import Number
-from typing import Any, Callable, Collection, Dict, Generator, Iterable, \
-	Tuple, \
-	Union
+from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Union, Collection
 
 import numpy as np
 
@@ -254,15 +253,6 @@ def is_homogeneous(data: mldata.ExampleSet) -> bool:
 	return len(set(get_labels(data))) == 1
 
 
-def is_continuous(feature: mldata.Feature) -> bool:
-	return feature.type is mldata.Feature.Type.CONTINUOUS
-
-
-def is_discrete(feature: mldata.Feature) -> bool:
-	return feature.type in {
-		mldata.Feature.Type.BINARY, mldata.Feature.Type.NOMINAL}
-
-
 def get_majority_label(data: mldata.ExampleSet):
 	return Counter(get_labels(data)).most_common(1)[0][0]
 
@@ -287,8 +277,7 @@ def quantify_nominals(data: np.array, types):
 		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]]
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
-				quantified[m][
-					id[0]] = i + 1  # avoids using 1, which is uninformative
+				quantified[m][id[0]] = i + 1  # avoids using 1, which is uninformative
 	return quantified
 
 
@@ -298,6 +287,34 @@ def convert_to_numpy(data: mldata.ExampleSet):
 	nparr = np.array(data).transpose()
 	nparr = nparr[1:len(nparr) - 1]
 	return nparr, types
+	#names = [n.name for n in info]
+	#dtypes = [np.array(n).dtype for n in fdata]
+	#nparr = np.recarray(shape = (len(fdatra)),
+	#					dtype={'names': names, 'formats': (dtypes)})
+	# len(fdata[1])
+	#for i, d in enumerate(fdata):
+	#	for ii, dd in enumerate(d):
+	#		nparr[i][ii] = dd
+# sorts low to high
+def compute_roc(scores, truths):
+	scores = np.array(scores)
+	truths = np.array(truths)
+	thresholds = np.unique(scores)
+	coordinates = np.zeros([len(np.unique(scores)), 2])
+	get_ratio = lambda tpr, fpr: tpr / fpr
+	best_point = [-1, -1]
+	for i, thresh in enumerate(thresholds):
+		accuracy, precision, recall, specificity, tps = prediction_stats(scores, truths, threshold=thresh)
+		tp = tps[0]
+		tn = tps[1]
+		fp = tps[2]
+		fn = tps[3]
+		coordinates[i][0] = fp / (tn + fp) #fpr
+		coordinates[i][1] = tp / (tp + fn) #tpr
+		ratio = precision / recall
+		if ratio > best_point[0]:
+			best_point[0] = ratio
+			best_point[1] = thresh
 # names = [n.name for n in info]
 # dtypes = [np.array(n).dtype for n in fdata]
 # nparr = np.recarray(shape = (len(fdata)),
@@ -306,3 +323,40 @@ def convert_to_numpy(data: mldata.ExampleSet):
 # for i, d in enumerate(fdata):
 #	for ii, dd in enumerate(d):
 #		nparr[i][ii] = dd
+
+	# now we have all the tpr's and fpr's for every threshold
+	# next compute area underneath by trapezoidal area approximation
+	auc = 0
+	end_x = 1
+	end_y = 1
+	coordinates[len(coordinates) - 1] = [0,0] # edge case
+	# todo: compare to built in function
+	for i, coord in enumerate(coordinates):
+		start_x = coord[0]
+		start_y = coord[1]
+		auc = auc + (end_x - start_x) * ((start_y + end_y) / 2) # get area of trapezoidal region
+		end_x = start_x
+		end_y = start_y
+	return auc, best_point[1]
+
+def prediction_stats (scores=None, truths=None, predictions: Collection[Iterable]=None, threshold=0.5):
+	if predictions is not None:
+		scores = np.array([p.confidence for p in predictions])
+		truths = np.array([t.value for t in predictions])
+	predicted_labels = scores >= threshold
+	tp, tn, fp, fn = compute_tf_fp(predicted_labels, truths)
+	accuracy = sum(predicted_labels == truths) / len(truths)
+	precision =  tp/(tp+fp)
+	recall = tp/(tp+fn)
+	specificity =tn/sum(truths == 0)
+	return accuracy, precision, recall, specificity, [tp, tn, fp, fn]
+
+# compute true pos, false pos, true neg, false neg
+def compute_tf_fp(predicted_labels: np.array, truths: np.array):
+	pos_truths = np.where(truths > 0)[0]
+	neg_truths = np.where(truths <= 0)[0]
+	tp = np.sum([1 for e in pos_truths if predicted_labels[e] == 1])
+	tn =  np.sum([1 for i in neg_truths if predicted_labels[i] == 0])
+	fp = np.sum([1 for e in neg_truths if predicted_labels[e] == 1])
+	fn = np.sum([1 for e in pos_truths if predicted_labels[e] == 0])
+	return tp, tn, fp, fn

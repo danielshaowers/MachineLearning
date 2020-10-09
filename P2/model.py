@@ -25,10 +25,14 @@ class Model(abc.ABC):
 		pass
 
 
-@dataclasses.dataclass(frozen=True)
+#@dataclasses.dataclass(frozen=True)
 class Prediction:
 	value: Any
 	confidence: float
+
+	def __init__(self, value, confidence):
+		self.value = value
+		self.confidence = confidence
 
 	def __post_init__(self):
 		if self.confidence < 0 or 1 < self.confidence:
