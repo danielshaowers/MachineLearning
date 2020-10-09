@@ -50,6 +50,9 @@ class LogisticRegression(model.Model):
 		# loss
 		return -y * np.math.log(x) - (1 - y) * np.math.log(1 - x)
 
+	# TODO Would it be possible to save the weights when training and avoid
+	#  passing in truths (aren't these a part of data?) to keep the test()
+	#  method signature the same as the other Model classes?
 	def predict(self, data: mldata.ExampleSet, weights, truths):
 		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
 		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
