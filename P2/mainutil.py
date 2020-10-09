@@ -36,14 +36,14 @@ def p2_main(path: str, learner: model.Model, skip_cv: bool):
 	all_labels = tuple(itertools.chain.from_iterable(labels))
 	auc, best_thresh = mlutil.compute_roc(scores=all_preds, truths=all_labels)
 	print_p2_results(
-		results['mean_accuracy'],
-		results['sd_accuracy'],
-		results['mean_precision'],
-		results['sd_precision'],
-		results['mean_recall'],
-		results['sd_recall'],
-		round(auc, 4),
-		round(best_thresh, 4)
+		mean_accuracy=results['mean_accuracy'],
+		sd_accuracy=results['sd_accuracy'],
+		mean_precision=results['mean_precision'],
+		sd_precision=results['sd_precision'],
+		mean_recall=results['mean_recall'],
+		sd_recall=results['sd_recall'],
+		mean_roc=round(auc, 4),
+		best_roc_threshold=round(best_thresh, 4)
 	)
 
 
