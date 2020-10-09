@@ -27,11 +27,11 @@ class Model(abc.ABC):
 
 #@dataclasses.dataclass(frozen=True)
 class Prediction:
-	value: Any
+	truth: Any
 	confidence: float
 
 	def __init__(self, value, confidence):
-		self.value = value
+		self.truth = value
 		self.confidence = confidence
 
 	def __post_init__(self):
