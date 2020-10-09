@@ -22,21 +22,22 @@ def standardize(data: mldata.ExampleSet) -> mldata.ExampleSet:
 	continuous_exs = mlutil.get_feature_examples(
 		data=data,
 		feature_types={CONTINUOUS},
-		as_tuple=False,
 		as_dict=True,
 		index_as_key=True
 	)
 	if len(continuous_exs) == 0:
 		return data
 	standardized = {i: stats.zscore(exs) for i, exs in continuous_exs.items()}
-	examples = [
-		[
-			standardized[f][e] if f in standardized else ex_val
+	examples = []
+	for e, ex_val in enumerate(data):
+		example = mldata.Example(data.schema)
+		example.features = [
+			standardized[f][e] if f in standardized else ex_val[f]
 			for f in range(len(data.schema))
-		] for e, ex_val in enumerate(data)
-	]
+		]
+		examples.append(example)
 	example_set = mldata.ExampleSet(data.schema)
-	example_set.append(examples)
+	example_set.extend(examples)
 	return example_set
 
 
@@ -60,7 +61,6 @@ def remove_near_zero_variance(
 	discrete_exs = mlutil.get_feature_examples(
 		data=data,
 		feature_types={BINARY, NOMINAL},
-		as_tuple=False,
 		as_dict=True,
 		index_as_key=True
 	)
@@ -69,11 +69,27 @@ def remove_near_zero_variance(
 	near_zeros = {
 		i for i, exs in discrete_exs.items() if discrete_var(exs) <= cut_off
 	}
-	examples = [
-		[ex[f] for f in range(len(data.schema)) if f not in near_zeros]
-		for ex in data
+	enumerated_subset_schema = [
+		(i, f) for i, f in enumerate(data.schema) if i not in near_zeros
 	]
-	schema = [f for i, f in enumerate(data.schema) if i not in near_zeros]
-	subset = mldata.ExampleSet(schema)
-	subset.append(examples)
+	subset_schema = [feature for _, feature in enumerated_subset_schema]
+	examples = []
+	for ex in data:
+		example = mldata.Example(subset_schema)
+		example.features = [ex[i] for i, _ in enumerated_subset_schema]
+		examples.append(example)
+	subset = mldata.ExampleSet()
+	subset.extend(examples)
 	return subset
+
+
+if __name__ == '__main__':
+	data = mldata.parse_c45('spam', '..')
+	continuous_exs = mlutil.get_feature_examples(
+		data=data,
+		feature_types={CONTINUOUS},
+		as_dict=True,
+		index_as_key=True
+	)
+	# processed = standardize(data)
+	processed = remove_near_zero_variance(data, 100)
