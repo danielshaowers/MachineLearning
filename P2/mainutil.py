@@ -42,7 +42,8 @@ def p2_main(path: str, learner: model.Model, skip_cv: bool):
 		results['sd_precision'],
 		results['mean_recall'],
 		results['sd_recall'],
-		round(auc, 4)
+		round(auc, 4),
+		round(best_thresh, 4)
 	)
 
 
@@ -70,11 +71,13 @@ def print_p2_results(
 		sd_precision: float,
 		mean_recall: float,
 		sd_recall: float,
-		mean_roc: float):
+		mean_roc: float,
+		best_roc_threshold: float):
 	print(f'Accuracy: {mean_accuracy} {sd_accuracy}')
 	print(f'Precision: {mean_precision} {sd_precision}')
 	print(f'Recall: {mean_recall} {sd_recall}')
 	print(f'Area under ROC: {mean_roc}')
+	print(f'Best threshold: {best_roc_threshold}')
 
 
 def get_dataset_and_path(path: str):
