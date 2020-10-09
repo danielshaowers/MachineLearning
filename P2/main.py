@@ -4,13 +4,17 @@ import numpy as np
 from P2 import mldata, mlutil, logreg
 
 
-def mainm(dataset, data_path, use_cv, max_depth, use_info_gain: int):
+def mainm(dataset, data_path, use_cv, max_depth, use_logreg: int):
     # only relevant for when we're running the experiment
     data = mldata.parse_c45(dataset, data_path)
-    npdata = mlutil.convert_to_numpy(data)
-    labels = np.array(mlutil.get_labels(data))
-    learner = logreg.LogisticRegression()
-    weights = learner.train(data, labels)
+    if use_logreg:
+        npdata = mlutil.convert_to_numpy(data)
+        labels = np.array(mlutil.get_labels(data))
+        learner = logreg.LogisticRegression()
+        weights = learner.train(data, labels)
+        predictions = learner.predict(data, weights, truths = labels)
+        accuracy, precision, recall, specificity, roc, best_thresh= mlutil.prediction_stats(predictions=predictions, threshold=0.5)
+        print('accuracy=' + str(accuracy))
 if __name__ == "__main__":
     random.seed(a=12345)
 try:
@@ -42,8 +46,8 @@ except ValueError:
     dataset = 'voting'
     use_cv = True
     max_depth = 1
-    use_info_gain = 0
+    use_log_reg = 1
     max_depth = int(max_depth)
     use_cv = bool(use_cv)
-    use_info_gain = bool(use_info_gain)
-    mainm(dataset, data_path, use_cv, max_depth, use_info_gain)
+    use_log_reg = bool(use_log_reg)
+    mainm(dataset, data_path, use_cv, max_depth, use_log_reg)

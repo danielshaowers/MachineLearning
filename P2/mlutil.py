@@ -2,7 +2,7 @@ import functools
 import operator
 from collections import Counter
 from numbers import Number
-from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Union, Collection
 
 import numpy as np
 
@@ -265,10 +265,33 @@ def convert_to_numpy(data: mldata.ExampleSet):
 	return nparr, types
 	#names = [n.name for n in info]
 	#dtypes = [np.array(n).dtype for n in fdata]
-	#nparr = np.recarray(shape = (len(fdata)),
+	#nparr = np.recarray(shape = (len(fdatra)),
 	#					dtype={'names': names, 'formats': (dtypes)})
 	# len(fdata[1])
 	#for i, d in enumerate(fdata):
 	#	for ii, dd in enumerate(d):
 	#		nparr[i][ii] = dd
 
+def compute_roc(scores, truths):
+	return None, None
+
+def prediction_stats(scores=None, truths=None, predictions: Collection[Iterable]=None, threshold=0.5):
+	if predictions is not None:
+		scores = np.array([p.confidence for p in predictions])
+		truths = np.array([t.value for t in predictions])
+	predicted_labels = scores >= threshold
+	tp, tn, fp, fn = compute_tf_fp(predicted_labels, truths)
+	accuracy = sum(predicted_labels == truths) / len(truths)
+	precision =  tp/(tp+fp)
+	recall = tp/(tp+fn)
+	specificity =tn/sum(truths == 0)
+	roc, best_thresh = compute_roc(scores, truths)
+	return accuracy, precision, recall, specificity, roc, best_thresh
+
+# compute true pos, false pos, true neg, false neg
+def compute_tf_fp(predicted_labels: np.array, truths: np.array):
+	tp = predicted_labels + truths == 2
+	tn = predicted_labels + truths == 0
+	fp = np.sum([predicted_labels[e[0]] for e in np.argwhere(truths == 0)])
+	fn = np.sum([~predicted_labels[e[0]] + 1 for e in np.argwhere(truths == 1)])
+	return tp, tn, fp, fn

@@ -31,7 +31,7 @@ class LogisticRegression(model.Model):
 		self.weights = self.gradient_descent(
 			npdata, truths, weights, stepsize=1, skip=set())
 		# okay now the weights should be finalized
-		return self.weights, bias
+		return self.weights
 
 	@staticmethod
 	def sigmoid(x, bias=0):
@@ -54,27 +54,14 @@ class LogisticRegression(model.Model):
 	#  passing in truths (aren't these a part of data?) to keep the test()
 	#  method signature the same as the other Model classes?
 	def predict(self, data: mldata.ExampleSet, weights, truths):
-		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
-		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
-		ndata = mlutil.convert_to_numpy(data)
-		ndata = mlutil.quantify_nominals(ndata)
-		weighted_feats = np.transpose(
-			np.array([weights[i] * f for i, f in enumerate(ndata)]))
-		sigmoid = np.array(
-			# vector to save the sigmoid values for each example
-			[self.sigmoid(sum(w)) for w in weighted_feats])
-		out = self.conditional_log_likelihood(
-			truths, sigmoid, weighted_feats, complexity=1) / len(sigmoid)
-		# TODO loss is not used
-		loss = out / len(sigmoid)  # average loss
-		pass
+		#guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
+		#guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
+		ndata = self.preprocess(data)
+		weighted_feats = np.transpose(np.array([weights[i] * f for i, f in enumerate(ndata)]))
+		log_likelihood_scores = np.array([self.sigmoid(sum(w)) for w in weighted_feats])  # vector to save the sigmoid values for each example
+		return [model.Prediction(value=truths[i], confidence=sc) for i,sc in enumerate(log_likelihood_scores)]
 
-	def conditional_log_likelihood(
-			self,
-			labels,
-			sigmoids,
-			weights,
-			complexity=1):
+	def conditional_log_likelihood(self, labels, sigmoids, weights, complexity = 1):
 		poslabel_idx = np.argwhere(labels > 0)
 		neglabel_idx = np.argwhere(labels <= 0)
 		pos_sigmoids = sigmoids[poslabel_idx]
@@ -102,8 +89,7 @@ class LogisticRegression(model.Model):
 		if skip is None:
 			skip = set()
 		iterations = 0
-
-		while not (len(skip) == len(ndata) or iterations > 100):
+		while not (len(skip) == len(ndata) or iterations > 1000):
 			iterations = iterations + 1
 			weighted_feats = []
 			# for i, f in enumerate(ndata):
