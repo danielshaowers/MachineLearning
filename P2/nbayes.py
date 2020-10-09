@@ -72,8 +72,6 @@ class NaiveBayes(model.Model):
 			raise ValueError('There are no examples to predict!')
 		if len(self.params) == 0:
 			raise AttributeError('Train the model first!')
-		# TODO Will need to modify if using a subset of the features to train
-		#  Get the features common between the training data and the test data
 		info = mlutil.get_features_info(data)
 		preds = []
 		label_info = mlutil.get_label_info(data)
@@ -115,6 +113,20 @@ class NaiveBayes(model.Model):
 			exs = self._get_feature_values(feature, examples)
 			model_parameters[feature] = self._compute_probability(exs, labels)
 		self.params = model_parameters
+
+	def _get_feature_values(
+			self,
+			feature: mldata.Feature,
+			examples: Union[Any, Collection]) -> Union[Any, Collection]:
+		"""Discretize the examples if continuous."""
+		if len(self.binners) == 0:
+			raise AttributeError('Preprocess the data first!')
+		exs = examples
+		if feature.type is mldata.Feature.Type.CONTINUOUS:
+			if feature not in self.binners:
+				raise KeyError('Feature binner function not found.')
+			exs = self.binners[feature](examples)
+		return exs
 
 	def _compute_probability(
 			self,
@@ -164,16 +176,6 @@ class NaiveBayes(model.Model):
 		else:
 			param = self.params[feature][(f_value, label)]
 		return param
-
-	def _get_feature_values(
-			self,
-			feature: mldata.Feature,
-			examples: Union[Any, Collection]) -> Union[Any, Collection]:
-		"""Discretize the examples if continuous."""
-		exs = examples
-		if feature.type is mldata.Feature.Type.CONTINUOUS:
-			exs = self.binners[feature](examples)
-		return exs
 
 	# TODO Maybe use for research extension?
 	@staticmethod
