@@ -14,7 +14,8 @@ def mainm(dataset, data_path, use_cv, max_depth, use_logreg: int):
         learner = logreg.LogisticRegression()
         weights = learner.train(data, labels)
         predictions, scores = learner.predict(data)
-        accuracy, precision, recall, specificity, auc, best_thresh= mlutil.prediction_stats(scores=scores, truths=labels, threshold=0.5)
+        accuracy, precision, recall, specificity, x= mlutil.prediction_stats(scores=scores, truths=labels, threshold=0.5)
+        auc, best_thresh = mlutil.compute_roc(scores, labels)
         print('accuracy=' + str(accuracy) + "\nAUC=" + str(auc) + "\nbest_threshold=" + str(best_thresh))
 if __name__ == "__main__":
     random.seed(a=12345)
