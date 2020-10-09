@@ -295,9 +295,9 @@ def quantify_nominals(data: np.array, types):
 def convert_to_numpy(data: mldata.ExampleSet):
 	info = get_features_info(data)
 	types = np.array([n.type for n in info])
-	nparr = np.array(data).transpose()
-	nparr = nparr[1:len(nparr) - 1]
-	return nparr, types
+	np_data = np.array(data).transpose()
+	np_data = np_data[1:len(np_data) - 1]
+	return np_data, types
 
 
 def compute_roc(scores, truths):
