@@ -1,6 +1,5 @@
 import abc
-import dataclasses
-from typing import Any
+from typing import Tuple
 
 import mldata
 
@@ -21,19 +20,5 @@ class Model(abc.ABC):
 		pass
 
 	@abc.abstractmethod
-	def predict(self, data: mldata.ExampleSet):
+	def predict(self, data: mldata.ExampleSet) -> Tuple:
 		pass
-
-
-#@dataclasses.dataclass(frozen=True)
-class Prediction:
-	value: Any
-	confidence: float
-
-	def __init__(self, value, confidence):
-		self.value = value
-		self.confidence = confidence
-
-	def __post_init__(self):
-		if self.confidence < 0 or 1 < self.confidence:
-			raise ValueError('Confidence must be between 0 and 1, inclusive')

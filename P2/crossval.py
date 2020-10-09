@@ -5,6 +5,28 @@ from typing import Sequence, Tuple
 
 import mldata
 import mlutil
+import model
+
+
+def cross_validate(
+		model: model.Model,
+		data: mldata.ExampleSet,
+		n_folds: int) -> Tuple[Tuple, Tuple]:
+	fold_predictions = []
+	fold_test_labels = []
+	if n_folds < 1:
+		raise ValueError('Minimum number of folds is 1 (full dataset)')
+	folds = get_folds(data, n_folds)
+	for i in range(n_folds):
+		if n_folds == 1:
+			train = data
+			test = data
+		else:
+			train, test = get_train_test_split(folds, i)
+		model.train(train)
+		fold_predictions.append(model.predict(test))
+		fold_test_labels.append(mlutil.get_labels(test))
+	return tuple(fold_predictions), tuple(fold_test_labels)
 
 
 def get_train_test_split(folds: Sequence, test_fold_ind: int) -> Tuple:
