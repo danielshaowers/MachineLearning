@@ -1,5 +1,5 @@
 import random
-from collections import Set
+from typing import Set
 
 import numpy as np
 
