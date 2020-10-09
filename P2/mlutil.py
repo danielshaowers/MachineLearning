@@ -271,8 +271,23 @@ def convert_to_numpy(data: mldata.ExampleSet):
 	#for i, d in enumerate(fdata):
 	#	for ii, dd in enumerate(d):
 	#		nparr[i][ii] = dd
-
+# sorts low to high
 def compute_roc(scores, truths):
+	scores = np.array(scores)
+	truths = np.array(truths)
+	thresholds = np.unique(scores)
+	coordinates = np.zeros([len(np.unique(scores)), 2])
+	for i, thresh in enumerate(thresholds):
+		tp, tn, fp, fn = compute_tf_fp(scores >= thresh, truths)
+		coordinates[i,0] = fp / (tn + fp) #fpr
+		coordinates[i,1] = tp / (tp + fn) #tpr
+	# now we have all the tpr's and fpr's for every threshold
+	# next compute area underneath by trapezoidal area approximation
+	num_partitions = 
+
+
+
+
 	return None, None
 
 def prediction_stats(scores=None, truths=None, predictions: Collection[Iterable]=None, threshold=0.5):

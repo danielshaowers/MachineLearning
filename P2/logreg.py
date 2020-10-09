@@ -22,14 +22,11 @@ class LogisticRegression(model.Model):
 	# TODO Would it be possible to pass in truths when instantiating the
 	#  class to keep the train() method signature the same as the other Model
 	#  classes?
-	def train(self, data: mldata.ExampleSet, truths: np.array):
+	def train(self, data: mldata.ExampleSet, truths: np.array, penalty=1):
 		npdata = self.preprocess(data)
 		weights = np.random.rand(len(npdata))
-		# randomly initialize biases? not sure if i should even incorporate
-		# biases
-		bias = np.random.rand(len(npdata), 1)
 		self.weights = self.gradient_descent(
-			npdata, truths, weights, stepsize=1, skip=set())
+			npdata, truths, weights, stepsize=1, skip=set(), penalty=penalty)
 		# okay now the weights should be finalized
 		return self.weights
 
@@ -37,12 +34,8 @@ class LogisticRegression(model.Model):
 	def sigmoid(x, bias=0):
 		return 1 / (1 + np.exp(-x + bias))
 
-	@staticmethod
-	def weighted_input(x, weights):
-		return np.dot(x, weights)
-
-	def prob(self, weight, x):
-		return self.sigmoid(self.weighted_input(weight, x))
+	def gradient_func(self, x_sum, x, y):
+		return (self.sigmoid(x_sum)) - y * x
 
 	@staticmethod
 	def conditional(x, y):
@@ -50,16 +43,14 @@ class LogisticRegression(model.Model):
 		# loss
 		return -y * np.math.log(x) - (1 - y) * np.math.log(1 - x)
 
-	# TODO Would it be possible to save the weights when training and avoid
-	#  passing in truths (aren't these a part of data?) to keep the test()
-	#  method signature the same as the other Model classes?
-	def predict(self, data: mldata.ExampleSet, weights, truths):
+
+	def predict(self, data: mldata.ExampleSet):
 		#guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
 		#guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
 		ndata = self.preprocess(data)
-		weighted_feats = np.transpose(np.array([weights[i] * f for i, f in enumerate(ndata)]))
+		weighted_feats = np.transpose(np.array([self.weights[i] * f for i, f in enumerate(ndata)]))
 		log_likelihood_scores = np.array([self.sigmoid(sum(w)) for w in weighted_feats])  # vector to save the sigmoid values for each example
-		return [model.Prediction(value=truths[i], confidence=sc) for i,sc in enumerate(log_likelihood_scores)]
+		return [model.Prediction(value = sc > 0.5, confidence=sc) for i,sc in enumerate(log_likelihood_scores)], log_likelihood_scores
 
 	def conditional_log_likelihood(self, labels, sigmoids, weights, complexity = 1):
 		poslabel_idx = np.argwhere(labels > 0)
@@ -78,6 +69,7 @@ class LogisticRegression(model.Model):
 	# todo: for any binary variables, convert 0 and 1 to -1 and 1. look out
 	#  for normalization
 	# todo: check out overfitting control w/ c term and ||w||
+	# added c term to final weight update for each gradient calculation
 	def gradient_descent(
 			self,
 			ndata,
@@ -85,6 +77,7 @@ class LogisticRegression(model.Model):
 			weights,
 			stepsize,
 			epsilon=1,
+			penalty=1,
 			skip: Set = None):
 		if skip is None:
 			skip = set()
@@ -100,8 +93,7 @@ class LogisticRegression(model.Model):
 				np.array([weights[i] * f for i, f in enumerate(ndata)]))
 			# gradient calculated as dJ(theta)/d(theta_j) = 1/m (sum from 1 to
 			# m of (h(x^i) - y^i) * x^ij
-			# TODO Just make this a function?
-			gradient_func = lambda x_sum, x, y: (self.sigmoid(x_sum) - y) * x
+
 			# the calculations themselves give us ONE gradient for one
 			# feature.
 			# so we loop over all features and store results as a numpy array
@@ -111,7 +103,7 @@ class LogisticRegression(model.Model):
 					# i indexes examples
 					inv = 1 / len(ndata)
 					grad = np.sum(
-						gradient_func(
+						self.gradient_func(
 							sum(weighted_feats[:][i]), ndata[j][i], truths[i])
 						for i, f in enumerate(ndata[j]))
 					gradient[j] = inv * grad
@@ -121,7 +113,7 @@ class LogisticRegression(model.Model):
 			finished = np.argwhere(abs(gradient) < epsilon)
 			if len(finished) > 0:
 				[skip.add(f[0]) for f in finished]
-			weights = weights - stepsize * gradient
+			weights = weights - penalty * stepsize * gradient
 		# weights = weights[0]
 		# self.gradient_descent(
 		# 	ndata, truths, weights + stepsize * gradient, stepsize)
