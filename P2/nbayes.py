@@ -1,6 +1,6 @@
 import functools
 import math
-from random import random
+import random
 from typing import Any, Callable, Collection, Mapping, NoReturn, Optional, \
 	Sequence, Tuple, Union
 
