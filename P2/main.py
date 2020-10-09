@@ -1,7 +1,10 @@
 import random
 from sys import argv
+
 import numpy as np
-from P2 import mldata, mlutil
+
+import mldata
+import mlutil
 
 
 def mainm(dataset, data_path, use_cv, max_depth, use_info_gain: int):

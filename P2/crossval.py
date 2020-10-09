@@ -1,5 +1,4 @@
-import functools
-import operator
+import itertools
 import random
 from collections import defaultdict
 from typing import Sequence, Tuple
@@ -18,7 +17,8 @@ def get_train_test_split(folds: Sequence, test_fold_ind: int) -> Tuple:
 		A training set and test set.
 	"""
 	train_folds = [folds[i] for i in range(len(folds)) if i != test_fold_ind]
-	train_set = mldata.ExampleSet(functools.reduce(operator.add, train_folds))
+	training_examples = list(itertools.chain.from_iterable(train_folds))
+	train_set = mldata.ExampleSet(training_examples)
 	test_set = mldata.ExampleSet(folds[test_fold_ind])
 	return train_set, test_set
 
