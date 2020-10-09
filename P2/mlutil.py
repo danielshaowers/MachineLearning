@@ -246,17 +246,29 @@ def get_feature_index(data: mldata.ExampleSet, feature: mldata.Feature) -> int:
 def get_label_info(data: mldata.ExampleSet) -> mldata.Feature:
 	return data.schema[-1]
 
+def quantify_nominals(data: np.array, types):
+	indices = np.where(types == 'NOMINAL')[0]
+	categories = [np.unique(data[i]) for i in indices]
+	quantified = np.ndarray([len(data), len(data[0])], dtype='int64')
+	for m,z in enumerate(indices):
+		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]]
+		for i, idxs in enumerate(val_idxs):
+			for id in idxs:
+				quantified[m][id[0]] = i + 1  # avoids using 1, which is uninformative
+	return quantified
 
 def convert_to_numpy(data: mldata.ExampleSet):
-	fdata = get_feature_examples(data)
-	arr = [d for i, d in enumerate(fdata)]
 	info = get_features_info(data)
-	names = [n.name for n in info]
-	dtypes = [np.array(n).dtype for n in arr]
-	types = [n.type for n in info]
-	nparr = np.recarray([len(arr), len(arr[1])],
-						dtype={'names': names, 'formats': (dtypes)})
-	for i, d in enumerate(arr):
-		for ii, dd in enumerate(d):
-			nparr[i][ii] = dd
-	return nparr, types,
+	types = np.array([n.type for n in info])
+	nparr=np.array(data).transpose()
+	nparr = nparr[1:len(nparr)-1]
+	return nparr, types
+	#names = [n.name for n in info]
+	#dtypes = [np.array(n).dtype for n in fdata]
+	#nparr = np.recarray(shape = (len(fdata)),
+	#					dtype={'names': names, 'formats': (dtypes)})
+	# len(fdata[1])
+	#for i, d in enumerate(fdata):
+	#	for ii, dd in enumerate(d):
+	#		nparr[i][ii] = dd
+

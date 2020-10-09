@@ -1,10 +1,7 @@
 import random
 from sys import argv
-
 import numpy as np
-
-import mldata
-import mlutil
+from P2 import mldata, mlutil, logreg
 
 
 def mainm(dataset, data_path, use_cv, max_depth, use_info_gain: int):
@@ -12,6 +9,8 @@ def mainm(dataset, data_path, use_cv, max_depth, use_info_gain: int):
     data = mldata.parse_c45(dataset, data_path)
     npdata = mlutil.convert_to_numpy(data)
     labels = np.array(mlutil.get_labels(data))
+    learner = logreg.LogisticRegression()
+    weights = learner.train(data, labels)
 if __name__ == "__main__":
     random.seed(a=12345)
 try:
