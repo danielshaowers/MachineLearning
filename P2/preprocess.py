@@ -81,15 +81,3 @@ def remove_near_zero_variance(
 	subset = mldata.ExampleSet()
 	subset.extend(examples)
 	return subset
-
-
-if __name__ == '__main__':
-	data = mldata.parse_c45('spam', '..')
-	continuous_exs = mlutil.get_feature_examples(
-		data=data,
-		feature_types={CONTINUOUS},
-		as_dict=True,
-		index_as_key=True
-	)
-	# processed = standardize(data)
-	processed = remove_near_zero_variance(data, 100)
