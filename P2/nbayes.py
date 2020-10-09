@@ -1,12 +1,12 @@
 import functools
 import math
-import statistics
+from random import random
 from typing import Any, Callable, Collection, Mapping, NoReturn, Optional, \
 	Sequence, Tuple, Union
 
 import numpy as np
 
-import crossval
+import mainutil
 import metrics
 import mldata
 import mlutil
@@ -21,7 +21,7 @@ class NaiveBayes(model.Model):
 	Attributes:
 		n_bins: Number of bins for discretizing continuous features. Must be
 			at least 2 in order to discretize the features.
-		use_laplace_smoothing: True will apply Laplace smoothing to the
+		laplace_smoothing_m: True will apply Laplace smoothing to the
 			probabilities of the model parameters.
 		binners: A dictionary of partial discretization functions. Each
 			function corresponds to a continuous feature to be binned. Prior
@@ -31,7 +31,10 @@ class NaiveBayes(model.Model):
 		params: Learned model parameters from the training data.
 	"""
 
-	def __init__(self, n_bins: int = 2, use_laplace_smoothing: bool = False):
+	def __init__(
+			self,
+			n_bins: int = 2,
+			laplace_smoothing_m: Union[int, float] = 0):
 		super(NaiveBayes, self).__init__()
 		if n_bins < 2:
 			raise ValueError(
@@ -39,17 +42,17 @@ class NaiveBayes(model.Model):
 				'features'
 			)
 		self.n_bins = n_bins
-		self.use_laplace_smoothing = use_laplace_smoothing
+		self.laplace_smoothing_m = laplace_smoothing_m
 		self.binners = dict()
 		self.params = dict()
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
 		n_bins = f'n_bins={self.n_bins}'
-		laplace_smoothing = f'laplace_smoothing={self.use_laplace_smoothing}'
+		laplace_smoothing = f'laplace_smoothing_m={self.laplace_smoothing_m}'
 		return f'{class_name}({n_bins}, {laplace_smoothing})'
 
-	def predict(self, data: mldata.ExampleSet) -> Tuple[model.Prediction]:
+	def predict(self, data: mldata.ExampleSet) -> Tuple[float]:
 		"""Predict the label of each test example in the data.
 
 		For the naive Bayes classifier, the prior and likelihood are summed (
@@ -61,8 +64,7 @@ class NaiveBayes(model.Model):
 			data: Collection of test examples.
 
 		Returns:
-			A tuple of Predictions, each with the predicted class label and
-			confidence value.
+			A tuple of confidence values, each corresponding to a test example.
 
 		Raises:
 			AttributeError: If the model has not yet been trained.
@@ -84,8 +86,10 @@ class NaiveBayes(model.Model):
 			# Get the class label (0) with the maximum probability (1).
 			pred = max(probabilities, key=lambda pr: pr[1])
 			# Log probability needs to be mapped back to get confidence.
+			# TODO Normalize to proper probability
 			conf = math.exp(pred[1])
-			preds.append(model.Prediction(value=pred[0], confidence=conf))
+			# TODO Return tuple of confidences
+			preds.append(conf)
 		return tuple(preds)
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
@@ -132,14 +136,12 @@ class NaiveBayes(model.Model):
 			self,
 			event: Collection,
 			given: Collection) -> Union[float, Mapping[Any, float]]:
-		if self.use_laplace_smoothing:
+		m = self.laplace_smoothing_m
+		if self.laplace_smoothing_m < 0:
 			m = len(set(event))
-			p = 1 / m
-			probability = metrics.probability(
-				event=event, given=given, m=m, p=p, log_base=math.e)
-		else:
-			probability = metrics.probability(
-				event=event, given=given, log_base=math.e)
+		p = 1 / m
+		probability = metrics.probability(
+			event=event, given=given, m=m, p=p, log_base=math.e)
 		return probability
 
 	def _preprocess(self, data: mldata.ExampleSet) -> NoReturn:
@@ -177,49 +179,24 @@ class NaiveBayes(model.Model):
 			param = self.params[feature][(f_value, label)]
 		return param
 
-	# TODO Maybe use for research extension?
-	@staticmethod
-	def quantilize(values: Sequence, n: int = 2) -> Tuple:
-		quantiles = NaiveBayes.compute_quantiles(values, n)
-		discretized = []
-		for v in values:
-			i_quantile = 0
-			while v > quantiles[i_quantile]:
-				i_quantile += 1
-			discretized.append(i_quantile)
-		return quantiles, tuple(discretized)
 
-	@staticmethod
-	def compute_quantiles(values: Sequence, n: int = 2):
-		if n < 2:
-			raise ValueError('n must be at least 2')
-		return tuple(
-			np.quantile(values, q=(quant + 1) / n) for quant in range(n - 1))
+def main(path: str, skip_cv: bool, n_bins: int, m: Union[int, float]):
+	nb = NaiveBayes(n_bins=n_bins, laplace_smoothing_m=m)
+	mainutil.p2_main(path, nb, skip_cv)
 
 
 if __name__ == '__main__':
-	import time
-
-	start = time.time()
-	data_sets = {'spam', 'voting', 'volcanoes'}
-	n_folds = 5
-	nb = NaiveBayes()
-	results = dict()
-	for data_set in data_sets:
-		data = mldata.parse_c45(data_set, '..')
-		folds = crossval.get_folds(data, n_folds)
-		data_set_results = []
-		for i in range(n_folds):
-			train, test = crossval.get_train_test_split(folds, i)
-			nb.train(train)
-			predicted = nb.predict(test)
-			total = sum(t[-1] == p.value for t, p in zip(test, predicted))
-			accuracy = total / len(test)
-			data_set_results.append(accuracy)
-		results[data_set] = {
-			'mean accuracy': round(statistics.mean(data_set_results), 3),
-			'sd accuracy': round(statistics.stdev(data_set_results), 3)
-		}
-	stop = time.time()
-	print(f'RUNTIME: {round((stop - start) / 60, 3)} minutes')
-	print(results)
+	random.seed(a=12345)
+	parser = mainutil.base_arg_parser()
+	parser.add_argument(
+		'--m',
+		type=float,
+		help='Value for m-estimates. m < 0 will use Laplace smoothing')
+	parser.add_argument(
+		'--bins',
+		type=int,
+		help='Number of bins for continuous feature discretization (min 2)',
+		required=True
+	)
+	args = parser.parse_args()
+	main(path=args.path, skip_cv=args.skip_cv, n_bins=args.bins, m=args.m)
