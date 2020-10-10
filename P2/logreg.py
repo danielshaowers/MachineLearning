@@ -1,3 +1,4 @@
+import functools
 import random
 from typing import Set
 
@@ -35,22 +36,27 @@ class LogisticRegression(model.Model):
 	# okay now the weights should be finalized
 
 	@staticmethod
+	@functools.lru_cache(512)
 	def sigmoid(x, bias=0):
 		return 1 / (1 + np.exp(-x + bias))
 
 	@staticmethod
+	@functools.lru_cache(512)
 	def weighted_input(x, weights):
 		return np.dot(x, weights)
 
+	@functools.lru_cache(512)
 	def prob(self, weight, x):
 		return self.sigmoid(self.weighted_input(weight, x))
 
 	@staticmethod
+	@functools.lru_cache(512)
 	def conditional(x, y):
 		# calculate log likelihood to maintain convexity instead of squared
 		# loss
 		return -y * np.math.log(x) - (1 - y) * np.math.log(1 - x)
 
+	@functools.lru_cache(512)
 	def predict(self, data: mldata.ExampleSet):
 		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
 		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
@@ -65,7 +71,7 @@ class LogisticRegression(model.Model):
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
 	# sc in enumerate(log_likelihood_scores)]
-
+	@functools.lru_cache(512)
 	def conditional_log_likelihood(self, labels, sigmoids, weights):
 		poslabel_idx = np.argwhere(labels > 0)
 		neglabel_idx = np.argwhere(labels <= 0)
@@ -83,6 +89,7 @@ class LogisticRegression(model.Model):
 	# todo: for any binary variables, convert 0 and 1 to -1 and 1. look out
 	#  for normalization
 	# todo: check out overfitting control w/ c term and ||w||
+	@functools.lru_cache(512)
 	def gradient_descent(self, ndata, truths, weights, stepsize, epsilon=1,
 						 skip: Set = None):
 		if skip is None:
