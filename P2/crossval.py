@@ -9,7 +9,7 @@ import model
 
 
 def cross_validate(
-		model: model.Model,
+		learner: model.Model,
 		data: mldata.ExampleSet,
 		n_folds: int) -> Tuple[Tuple, Tuple]:
 	fold_predictions = []
@@ -23,8 +23,8 @@ def cross_validate(
 			test = data
 		else:
 			train, test = get_train_test_split(folds, i)
-		model.train(train)
-		fold_predictions.append(model.predict(test))
+		learner.train(train)
+		fold_predictions.append(learner.predict(test))
 		fold_test_labels.append(mlutil.get_labels(test))
 	return tuple(fold_predictions), tuple(fold_test_labels)
 

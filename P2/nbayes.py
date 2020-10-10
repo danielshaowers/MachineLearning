@@ -1,9 +1,12 @@
+import collections
 import functools
+import json
 import math
 import random
 from typing import Any, Callable, Collection, Mapping, NoReturn, Optional, \
 	Sequence, Tuple, Union
 
+import jsonpickle
 import numpy as np
 
 import mainutil
@@ -34,7 +37,9 @@ class NaiveBayes(model.Model):
 	def __init__(
 			self,
 			n_bins: int = 2,
-			laplace_smoothing_m: Union[int, float] = 0):
+			laplace_smoothing_m: Union[int, float] = 0,
+			binners: Mapping[mldata.Feature, Callable[[Any], int]] = None,
+			params: Mapping[mldata.Feature, Any] = None):
 		super(NaiveBayes, self).__init__()
 		if n_bins < 2:
 			raise ValueError(
@@ -43,8 +48,8 @@ class NaiveBayes(model.Model):
 			)
 		self.n_bins = n_bins
 		self.laplace_smoothing_m = laplace_smoothing_m
-		self.binners = dict()
-		self.params = dict()
+		self.binners = dict() if binners is None else binners
+		self.params = dict() if params is None else params
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -75,22 +80,21 @@ class NaiveBayes(model.Model):
 		if len(self.params) == 0:
 			raise AttributeError('Train the model first!')
 		info = mlutil.get_features_info(data)
-		preds = []
 		label_info = mlutil.get_label_info(data)
+		confidences = []
 		for ex in mlutil.get_example_features(data):
-			probabilities = (
+			probabilities = [
 				# Compute the log prior-likelihood sum for each class label.
 				[c, pr + sum(self._param(f, c, e) for e, f in zip(ex, info))]
 				for c, pr in self.params[label_info].items()
-			)
+			]
 			# Get the class label (0) with the maximum probability (1).
-			pred = max(probabilities, key=lambda pr: pr[1])
+			prediction = max(probabilities, key=lambda pr: pr[1])
+			# Normalization factor in computing the posterior probability.
+			evidence = sum(math.exp(pr) for _, pr in probabilities)
 			# Log probability needs to be mapped back to get confidence.
-			# TODO Normalize to proper probability
-			conf = math.exp(pred[1])
-			# TODO Return tuple of confidences
-			preds.append(conf)
-		return tuple(preds)
+			confidences.append(math.exp(prediction[1]) / evidence)
+		return tuple(confidences)
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
 		"""Train the naive Bayes classifier.
@@ -111,48 +115,63 @@ class NaiveBayes(model.Model):
 		model_parameters = dict()
 		labels = mlutil.get_labels(data)
 		label_info = mlutil.get_label_info(data)
-		model_parameters[label_info] = metrics.probability(labels)
+		model_parameters[label_info] = self._compute_probability(labels)
 		feature_examples = mlutil.get_feature_examples(data, as_dict=True)
 		for feature, examples in feature_examples.items():
 			exs = self._get_feature_values(feature, examples)
+			if isinstance(feature, np.ndarray):
+				print("IT'S THE FEATURES!!!!")
+				print(feature)
+			if isinstance(exs, np.ndarray):
+				print("IT'S THE EXAMPLES!!!!")
+				print(exs)
+			if isinstance(labels, np.ndarray):
+				print("IT'S THE LABELS!!!!")
 			model_parameters[feature] = self._compute_probability(exs, labels)
 		self.params = model_parameters
 
+	@functools.lru_cache(512)
 	def _get_feature_values(
 			self,
 			feature: mldata.Feature,
 			examples: Union[Any, Collection]) -> Union[Any, Collection]:
 		"""Discretize the examples if continuous."""
-		if len(self.binners) == 0:
-			raise AttributeError('Preprocess the data first!')
 		exs = examples
 		if feature.type is mldata.Feature.Type.CONTINUOUS:
+			if len(self.binners) == 0:
+				raise AttributeError('Preprocess the data first!')
 			if feature not in self.binners:
 				raise KeyError('Feature binner function not found.')
 			exs = self.binners[feature](examples)
-		return exs
+		return tuple(exs) if isinstance(exs, collections.abc.Iterable) else exs
 
+	@functools.lru_cache(512)
 	def _compute_probability(
 			self,
 			event: Collection,
-			given: Collection) -> Union[float, Mapping[Any, float]]:
-		m = self.laplace_smoothing_m
+			given: Collection = None) -> Union[float, Mapping[Any, float]]:
 		if self.laplace_smoothing_m < 0:
 			m = len(set(event))
-		p = 1 / m
-		probability = metrics.probability(
+			p = 1 / m
+		elif self.laplace_smoothing_m > 0:
+			m = self.laplace_smoothing_m
+			p = 1 / m
+		else:
+			m = 0
+			p = 0
+		return metrics.probability(
 			event=event, given=given, m=m, p=p, log_base=math.e)
-		return probability
 
+	@functools.lru_cache(512)
 	def _preprocess(self, data: mldata.ExampleSet) -> NoReturn:
-		"""Prefer space complexity over time complexity in terms of
+		"""Prefer time complexity over space complexity in terms of
 		discretizing the continuous features. Each binner function will be
 		used during training and prediction to determine the discretized
 		value of the feature."""
 		feature_examples = mlutil.get_feature_examples(data, as_dict=True)
 		self.binners = {
 			f: self._train_binner(ex) for f, ex in feature_examples.items()
-			if f.type == mldata.Feature.Type.CONTINUOUS
+			if f.type is mldata.Feature.Type.CONTINUOUS
 		}
 
 	def _train_binner(
@@ -165,6 +184,7 @@ class NaiveBayes(model.Model):
 		splits = np.arange(mn, mx, (mx - mn) / self.n_bins)
 		return functools.partial(lambda to_bin: np.digitize(to_bin, splits))
 
+	@functools.lru_cache(512)
 	def _param(
 			self,
 			feature: mldata.Feature,
@@ -179,19 +199,58 @@ class NaiveBayes(model.Model):
 			param = self.params[feature][(f_value, label)]
 		return param
 
+	def save(self, file: str) -> NoReturn:
+		with open(file, 'w') as f:
+			saved = {
+				'n_bins': self.n_bins,
+				'laplace_smoothing_m': self.laplace_smoothing_m,
+				'binners': {
+					jsonpickle.dumps(feature): jsonpickle.dumps(binner)
+					for feature, binner in self.binners.items()
+				},
+				'params': {
+					jsonpickle.dumps(feature): param
+					for feature, param in self.params.items()
+				}
+			}
+			json.dump(saved, f)
+
+	@staticmethod
+	def load(file: str):
+		with open(file) as f:
+			learner = json.load(f)
+			n_bins = learner['n_bins']
+			laplace_smoothing_m = learner['laplace_smoothing_m']
+			binners = {
+				jsonpickle.loads(feature): jsonpickle.loads(binner)
+				for feature, binner in learner['binners']
+			}
+			params = {
+				jsonpickle.loads(feature): param
+				for feature, param in learner['params']
+			}
+		return NaiveBayes(
+			n_bins=n_bins,
+			laplace_smoothing_m=laplace_smoothing_m,
+			binners=binners,
+			params=params
+		)
+
 
 def main(path: str, skip_cv: bool, n_bins: int, m: Union[int, float]):
 	nb = NaiveBayes(n_bins=n_bins, laplace_smoothing_m=m)
-	mainutil.p2_main(path, nb, skip_cv)
+	mainutil.p2_main(path=path, learner=nb, skip_cv=skip_cv)
 
 
 if __name__ == '__main__':
+	# main('..\\spam', False, 2, 0)
 	random.seed(a=12345)
 	parser = mainutil.base_arg_parser()
 	parser.add_argument(
 		'--m',
 		type=float,
-		help='Value for m-estimates. m < 0 will use Laplace smoothing')
+		help='Value for m-estimates. m < 0 will use Laplace smoothing',
+		required=True)
 	parser.add_argument(
 		'--bins',
 		type=int,

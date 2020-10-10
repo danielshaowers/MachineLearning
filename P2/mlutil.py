@@ -301,23 +301,22 @@ def convert_to_numpy(data: mldata.ExampleSet):
 
 
 def compute_roc(scores, truths):
-	scores = np.array(scores)
-	truths = np.array(truths)
-	thresholds = np.unique(scores)
-	coordinates = np.zeros([len(np.unique(scores)), 2])
+	predictions = np.array(scores)
+	labels = np.array(truths)
+	thresholds = np.unique(predictions)
+	coordinates = np.zeros([len(thresholds), 2])
 	best_point = [-1, -1]
 	for i, thresh in enumerate(thresholds):
 		accuracy, precision, recall, specificity, tps = prediction_stats(
-			scores,
-			truths,
-			threshold=thresh)
+			predictions, labels, threshold=thresh
+		)
 		tp = tps[0]
 		tn = tps[1]
 		fp = tps[2]
 		fn = tps[3]
 		coordinates[i][0] = fp / (tn + fp)  # fpr
 		coordinates[i][1] = tp / (tp + fn)  # tpr
-		ratio = precision / recall
+		ratio = precision / recall if recall != 0 else 0
 		if ratio > best_point[0]:
 			best_point[0] = ratio
 			best_point[1] = thresh
@@ -338,13 +337,15 @@ def compute_roc(scores, truths):
 	return auc, best_point[1]
 
 
-def prediction_stats(scores=None, truths=None, threshold=0.5):
-	predicted_labels = scores >= threshold
-	tp, tn, fp, fn = compute_tf_fp(predicted_labels, truths)
-	accuracy = sum(predicted_labels == truths) / len(truths)
+def prediction_stats(scores, truths, threshold=0.5):
+	predictions = np.array(scores)
+	labels = np.array(truths)
+	predicted_labels = predictions >= threshold
+	tp, tn, fp, fn = compute_tf_fp(predicted_labels, labels)
+	accuracy = sum(predicted_labels == labels) / len(labels)
 	precision = tp / (tp + fp)
 	recall = tp / (tp + fn)
-	specificity = tn / sum(truths == 0)
+	specificity = tn / sum(labels == 0)
 	return accuracy, precision, recall, specificity, [tp, tn, fp, fn]
 
 
@@ -352,8 +353,8 @@ def prediction_stats(scores=None, truths=None, threshold=0.5):
 def compute_tf_fp(predicted_labels: np.array, truths: np.array):
 	pos_truths = np.where(truths > 0)[0]
 	neg_truths = np.where(truths <= 0)[0]
-	tp = np.sum([1 for e in pos_truths if predicted_labels[e] == 1])
-	tn = np.sum([1 for i in neg_truths if predicted_labels[i] == 0])
-	fp = np.sum([1 for e in neg_truths if predicted_labels[e] == 1])
-	fn = np.sum([1 for e in pos_truths if predicted_labels[e] == 0])
+	tp = sum(1 for e in pos_truths if predicted_labels[e] == 1)
+	tn = sum(1 for i in neg_truths if predicted_labels[i] == 0)
+	fp = sum(1 for e in neg_truths if predicted_labels[e] == 1)
+	fn = sum(1 for e in pos_truths if predicted_labels[e] == 0)
 	return tp, tn, fp, fn

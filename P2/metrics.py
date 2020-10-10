@@ -226,6 +226,8 @@ def probability(
 		m: "Equivalent sample size" which determines the important of p
 			relative to the observations.
 		p: Prior estimate of the probability.
+		log_base: If provided, the log probability will be calculated with
+			the provided base.
 
 	Returns:
 		A dictionary of probabilities or a single float probability.
@@ -238,7 +240,7 @@ def probability(
 	# Default probability of something not in the dictionary is 0.0.
 	if event_test is None:
 		counts = collections.Counter(event)
-		pr = collections.defaultdict(float)
+		pr = collections.defaultdict(lambda: (m * p) / m)
 		if log_base is None:
 			pr.update({e: freq / len(event) for e, freq in counts.items()})
 		else:

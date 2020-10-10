@@ -13,12 +13,12 @@ def p2_main(path: str, learner: model.Model, skip_cv: bool):
 	data = mldata.parse_c45(file_base=file_base, rootdir=root_dir)
 	n_folds = 1 if skip_cv else 5
 	predictions, labels = crossval.cross_validate(
-		model=learner, data=data, n_folds=n_folds)
+		learner=learner, data=data, n_folds=n_folds)
 	accuracies = []
 	precisions = []
 	recalls = []
 	for predicted, truths in zip(predictions, labels):
-		accuracy, precision, recall, _ = mlutil.prediction_stats(
+		accuracy, precision, recall, _, _ = mlutil.prediction_stats(
 			scores=predicted, truths=truths, threshold=0.5
 		)
 		accuracies.append(accuracy)
@@ -26,12 +26,18 @@ def p2_main(path: str, learner: model.Model, skip_cv: bool):
 		recalls.append(recall)
 	results = {
 		'mean_accuracy': round(statistics.mean(accuracies), 4),
-		'sd_accuracy': round(statistics.stdev(accuracies), 4),
 		'mean_precision': round(statistics.mean(precisions), 4),
-		'sd_precision': round(statistics.stdev(precisions), 4),
 		'mean_recall': round(statistics.mean(recalls), 4),
-		'sd_recall': round(statistics.stdev(recalls), 4),
 	}
+	sd_accuracy = round(statistics.stdev(accuracies), 4) if n_folds > 1 else 0
+	sd_precision = round(statistics.stdev(precisions), 4) if n_folds > 1 else 0
+	sd_recall = round(statistics.stdev(recalls), 4) if n_folds > 1 else 0
+	results.update({
+		'sd_accuracy': sd_accuracy,
+		'sd_precision': sd_precision,
+		'sd_recall': sd_recall,
+	})
+
 	all_preds = tuple(itertools.chain.from_iterable(predictions))
 	all_labels = tuple(itertools.chain.from_iterable(labels))
 	auc, best_thresh = mlutil.compute_roc(scores=all_preds, truths=all_labels)

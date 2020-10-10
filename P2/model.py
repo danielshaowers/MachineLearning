@@ -1,5 +1,5 @@
 import abc
-from typing import Tuple
+from typing import NoReturn, Tuple
 
 import mldata
 
@@ -14,11 +14,21 @@ class Model(abc.ABC):
 
 	def __init__(self):
 		super(Model, self).__init__()
+		self.params = None
 
 	@abc.abstractmethod
-	def train(self, data: mldata.ExampleSet):
+	def train(self, data: mldata.ExampleSet) -> NoReturn:
 		pass
 
 	@abc.abstractmethod
 	def predict(self, data: mldata.ExampleSet) -> Tuple:
+		pass
+
+	@abc.abstractmethod
+	def save(self, file: str) -> NoReturn:
+		pass
+
+	@staticmethod
+	@abc.abstractmethod
+	def load(file: str):
 		pass
