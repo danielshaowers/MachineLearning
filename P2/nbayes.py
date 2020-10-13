@@ -1,9 +1,8 @@
-import collections
 import functools
 import json
 import math
-import random
-from typing import Any, Callable, Collection, Mapping, NoReturn, Optional, \
+from typing import Any, Callable, Collection, DefaultDict, Mapping, NoReturn, \
+	Optional, \
 	Sequence, Tuple, Union
 
 import jsonpickle
@@ -15,6 +14,8 @@ import mldata
 import mlutil
 import model
 
+
+# TODO Update docstrings
 
 class NaiveBayes(model.Model):
 	"""A standard naive Bayes classifier.
@@ -80,20 +81,23 @@ class NaiveBayes(model.Model):
 		if len(self.params) == 0:
 			raise AttributeError('Train the model first!')
 		info = mlutil.get_features_info(data)
-		label_info = mlutil.get_label_info(data)
+		label = mlutil.get_label_info(data)
 		confidences = []
 		for ex in mlutil.get_example_features(data):
 			probabilities = [
 				# Compute the log prior-likelihood sum for each class label.
-				[c, pr + sum(self._param(f, c, e) for e, f in zip(ex, info))]
-				for c, pr in self.params[label_info].items()
+				[c, pr + sum(self._param(f, c, e) for f, e in zip(info, ex))]
+				for c, pr in self.params[label].items()
 			]
 			# Get the class label (0) with the maximum probability (1).
 			prediction = max(probabilities, key=lambda pr: pr[1])
 			# Normalization factor in computing the posterior probability.
 			evidence = sum(math.exp(pr) for _, pr in probabilities)
 			# Log probability needs to be mapped back to get confidence.
-			confidences.append(math.exp(prediction[1]) / evidence)
+			confidence = math.exp(prediction[1]) / evidence
+			# Keep all confidences relative to positive examples
+			confidence = 1 - confidence if not prediction[0] else confidence
+			confidences.append(confidence)
 		return tuple(confidences)
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
@@ -108,29 +112,22 @@ class NaiveBayes(model.Model):
 		Returns:
 			None.
 		"""
-		self._preprocess(data)
-		self._naive_bayes(data)
+		self.binners = self._preprocess(data)
+		self.params = self._naive_bayes(data)
 
-	def _naive_bayes(self, data: mldata.ExampleSet) -> NoReturn:
+	def _naive_bayes(
+			self,
+			data: mldata.ExampleSet) -> Mapping[mldata.Feature, Any]:
 		model_parameters = dict()
 		labels = mlutil.get_labels(data)
-		label_info = mlutil.get_label_info(data)
-		model_parameters[label_info] = self._compute_probability(labels)
+		label = mlutil.get_label_info(data)
+		model_parameters[label] = self._compute_probability(labels)
 		feature_examples = mlutil.get_feature_examples(data, as_dict=True)
 		for feature, examples in feature_examples.items():
 			exs = self._get_feature_values(feature, examples)
-			if isinstance(feature, np.ndarray):
-				print("IT'S THE FEATURES!!!!")
-				print(feature)
-			if isinstance(exs, np.ndarray):
-				print("IT'S THE EXAMPLES!!!!")
-				print(exs)
-			if isinstance(labels, np.ndarray):
-				print("IT'S THE LABELS!!!!")
 			model_parameters[feature] = self._compute_probability(exs, labels)
-		self.params = model_parameters
+		return model_parameters
 
-	@functools.lru_cache(512)
 	def _get_feature_values(
 			self,
 			feature: mldata.Feature,
@@ -143,33 +140,32 @@ class NaiveBayes(model.Model):
 			if feature not in self.binners:
 				raise KeyError('Feature binner function not found.')
 			exs = self.binners[feature](examples)
-		return tuple(exs) if isinstance(exs, collections.abc.Iterable) else exs
+		return exs
 
-	@functools.lru_cache(512)
 	def _compute_probability(
 			self,
 			event: Collection,
-			given: Collection = None) -> Union[float, Mapping[Any, float]]:
+			given: Collection = None) -> DefaultDict[Any, float]:
+		v = len(set(event))
+		p = 1 / v
 		if self.laplace_smoothing_m < 0:
-			m = len(set(event))
-			p = 1 / m
+			m = v
 		elif self.laplace_smoothing_m > 0:
 			m = self.laplace_smoothing_m
-			p = 1 / m
 		else:
 			m = 0
-			p = 0
 		return metrics.probability(
 			event=event, given=given, m=m, p=p, log_base=math.e)
 
-	@functools.lru_cache(512)
-	def _preprocess(self, data: mldata.ExampleSet) -> NoReturn:
+	def _preprocess(
+			self,
+			data: mldata.ExampleSet) -> Mapping[mldata.Feature, Callable]:
 		"""Prefer time complexity over space complexity in terms of
 		discretizing the continuous features. Each binner function will be
 		used during training and prediction to determine the discretized
 		value of the feature."""
 		feature_examples = mlutil.get_feature_examples(data, as_dict=True)
-		self.binners = {
+		return {
 			f: self._train_binner(ex) for f, ex in feature_examples.items()
 			if f.type is mldata.Feature.Type.CONTINUOUS
 		}
@@ -184,7 +180,6 @@ class NaiveBayes(model.Model):
 		splits = np.arange(mn, mx, (mx - mn) / self.n_bins)
 		return functools.partial(lambda to_bin: np.digitize(to_bin, splits))
 
-	@functools.lru_cache(512)
 	def _param(
 			self,
 			feature: mldata.Feature,
@@ -243,19 +238,24 @@ def main(path: str, skip_cv: bool, n_bins: int, m: Union[int, float]):
 
 
 if __name__ == '__main__':
-	# main('..\\spam', False, 2, 0)
-	random.seed(a=12345)
-	parser = mainutil.base_arg_parser()
-	parser.add_argument(
-		'--m',
-		type=float,
-		help='Value for m-estimates. m < 0 will use Laplace smoothing',
-		required=True)
-	parser.add_argument(
-		'--bins',
-		type=int,
-		help='Number of bins for continuous feature discretization (min 2)',
-		required=True
-	)
-	args = parser.parse_args()
-	main(path=args.path, skip_cv=args.skip_cv, n_bins=args.bins, m=args.m)
+	import time
+
+	start = time.time()
+	main(path='..\\voting', skip_cv=False, n_bins=2, m=0)
+	stop = time.time()
+	print(f'RUNTIME: {round((stop - start) / 60, 3)} minutes')
+# random.seed(a=12345)
+# parser = mainutil.base_arg_parser()
+# parser.add_argument(
+# 	'--m',
+# 	type=float,
+# 	help='Value for m-estimates. m < 0 will use Laplace smoothing',
+# 	required=True)
+# parser.add_argument(
+# 	'--bins',
+# 	type=int,
+# 	help='Number of bins for continuous feature discretization (min 2)',
+# 	required=True
+# )
+# args = parser.parse_args()
+# main(path=args.path, skip_cv=args.skip_cv, n_bins=args.bins, m=args.m)

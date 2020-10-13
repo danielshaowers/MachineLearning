@@ -4,7 +4,7 @@ import functools
 import math
 import random
 import statistics
-from typing import Any, Callable, Collection, Mapping
+from typing import Any, Callable, Collection, DefaultDict
 from typing import Iterable, Union
 
 """
@@ -203,7 +203,7 @@ def probability(
 		given_test: Callable[[Any], bool] = None,
 		m: float = 0,
 		p: float = 0,
-		log_base: float = None) -> Union[float, Mapping[Any, float]]:
+		log_base: float = None) -> Union[float, DefaultDict[Any, float]]:
 	"""Computes either the unconditional or conditional probability.
 
 	If only the event is specified, the probability of each value it takes on
