@@ -282,13 +282,13 @@ def get_label_info(data: mldata.ExampleSet) -> mldata.Feature:
 def quantify_nominals(data: np.array, types):
 	indices = np.where(types == 'NOMINAL')[0]
 	categories = [np.unique(data[i]) for i in indices]
-	quantified = np.ndarray([len(data), len(data[0])], dtype='int64')
+	quantified = data #np.ndarray([len(data), len(data[0])], dtype='int64')
 	for m, z in enumerate(indices):
-		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]]
+		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]] # find indices of each category
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
-				# avoids using 1, which is uninformative
-				quantified[m][id[0]] = i + 1
+				# avoids using 0, which is uninformative
+				quantified[z][id[0]] = i + 1
 	return quantified
 
 
@@ -353,8 +353,8 @@ def prediction_stats(scores, truths, threshold=0.5):
 def compute_tf_fp(predicted_labels: np.array, truths: np.array):
 	pos_truths = np.where(truths > 0)[0]
 	neg_truths = np.where(truths <= 0)[0]
-	tp = sum(1 for e in pos_truths if predicted_labels[e] == 1)
-	tn = sum(1 for i in neg_truths if predicted_labels[i] == 0)
-	fp = sum(1 for e in neg_truths if predicted_labels[e] == 1)
-	fn = sum(1 for e in pos_truths if predicted_labels[e] == 0)
+	tp = np.sum([1 for e in pos_truths if predicted_labels[e] == 1])
+	tn = np.sum([1 for i in neg_truths if predicted_labels[i] == 0])
+	fp = np.sum(1 for e in neg_truths if predicted_labels[e] == 1)
+	fn = np.sum(1 for e in pos_truths if predicted_labels[e] == 0)
 	return tp, tn, fp, fn

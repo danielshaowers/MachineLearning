@@ -416,7 +416,6 @@ def _parse_example(schema, line):
 		if value == '?':
 			# Unknown value remains 'None'
 			continue
-
 		# Cast to proper type
 		stype = schema[i].type
 		if (stype == Feature.Type.ID or

@@ -39,7 +39,8 @@ class NaiveBayes(model.Model):
 			n_bins: int = 2,
 			laplace_smoothing_m: Union[int, float] = 0,
 			binners: Mapping[mldata.Feature, Callable[[Any], int]] = None,
-			params: Mapping[mldata.Feature, Any] = None):
+			params: Mapping[mldata.Feature, Any] = None,
+			folds: int=1):
 		super(NaiveBayes, self).__init__()
 		if n_bins < 2:
 			raise ValueError(
@@ -50,6 +51,7 @@ class NaiveBayes(model.Model):
 		self.laplace_smoothing_m = laplace_smoothing_m
 		self.binners = dict() if binners is None else binners
 		self.params = dict() if params is None else params
+		self.folds = folds
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -214,6 +216,9 @@ class NaiveBayes(model.Model):
 				}
 			}
 			json.dump(saved, f)
+
+	def getName(self):
+		return "nbayes"
 
 	@staticmethod
 	def load(file: str):

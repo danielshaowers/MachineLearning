@@ -23,6 +23,7 @@ def cross_validate(
 			test = data
 		else:
 			train, test = get_train_test_split(folds, i)
+		learner.fold = i + min(n_folds, 2) - 1
 		learner.train(train)
 		fold_predictions.append(learner.predict(test))
 		fold_test_labels.append(mlutil.get_labels(test))
