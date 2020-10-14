@@ -1,8 +1,12 @@
 import functools
 
+
 import json
 import random
 from typing import Set
+
+from typing import NoReturn, Set
+
 
 from typing import NoReturn, Set
 
@@ -87,7 +91,9 @@ class LogisticRegression(model.Model):
 			self.sigmoid(sum(w)) for w in weighted_feats
 		])
 
+
 		return log_likelihood_scores
+
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
 	# sc in enumerate(log_likelihood_scores)]
@@ -142,6 +148,13 @@ class LogisticRegression(model.Model):
 			weights = weights - stepsize * (self.cost * (sum(weights)) + gradient)  #(1/len(weights)) * self.cost * weight- (stepsize * self.cost / len(ndata)) * weights # update weights
 		return weights
 
+	def save(self, file: str) -> NoReturn:
+		pass
+
+	@staticmethod
+	def load(file: str):
+		pass
+
 
 	def getName(self):
 		return "logreg"
@@ -175,6 +188,7 @@ def main(path: str, skip_cv: bool, cost: float, iterations=100):
 
 
 if __name__ == "__main__":
+
 
 	random.seed(a=12345)
 	main(path = '..\\volcanoes', skip_cv = 0, cost=0.1)
