@@ -1,7 +1,11 @@
 import functools
+
 import json
 import random
 from typing import Set
+
+from typing import NoReturn, Set
+
 
 import jsonpickle
 import numpy as np
@@ -30,7 +34,7 @@ class LogisticRegression(model.Model):
 		return np.asarray(np_data, dtype='float64')
 
 	def train(self, data: mldata.ExampleSet):
-		truths = mlutil.get_labels(data)
+		truths = np.array(mlutil.get_labels(data))
 		np_data = self.preprocess(data)
 		# randomly initialize weights for each feature
 		weights = np.random.rand(len(np_data))
@@ -82,6 +86,7 @@ class LogisticRegression(model.Model):
 		log_likelihood_scores = np.array([
 			self.sigmoid(sum(w)) for w in weighted_feats
 		])
+
 		return log_likelihood_scores
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
@@ -137,6 +142,7 @@ class LogisticRegression(model.Model):
 			weights = weights - stepsize * (self.cost * (sum(weights)) + gradient)  #(1/len(weights)) * self.cost * weight- (stepsize * self.cost / len(ndata)) * weights # update weights
 		return weights
 
+
 	def getName(self):
 		return "logreg"
 
@@ -162,12 +168,14 @@ class LogisticRegression(model.Model):
 			learner, weights, cost, iterations, fold
 		)
 
+
 def main(path: str, skip_cv: bool, cost: float, iterations=100):
 	learner = LogisticRegression(cost=cost, iterations = iterations,)
 	mainutil.p2_main(path, learner, skip_cv)
 
 
 if __name__ == "__main__":
+
 	random.seed(a=12345)
 	main(path = '..\\volcanoes', skip_cv = 0, cost=0.1)
 #	parser = mainutil.base_arg_parser()

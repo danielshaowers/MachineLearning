@@ -4,7 +4,7 @@ import functools
 import math
 import random
 import statistics
-from typing import Any, Callable, Collection, Mapping
+from typing import Any, Callable, Collection, DefaultDict
 from typing import Iterable, Union
 
 """
@@ -203,7 +203,7 @@ def probability(
 		given_test: Callable[[Any], bool] = None,
 		m: float = 0,
 		p: float = 0,
-		log_base: float = None) -> Union[float, Mapping[Any, float]]:
+		log_base: float = None) -> Union[float, DefaultDict[Any, float]]:
 	"""Computes either the unconditional or conditional probability.
 
 	If only the event is specified, the probability of each value it takes on
@@ -230,14 +230,16 @@ def probability(
 			the provided base.
 
 	Returns:
-		A dictionary of probabilities or a single float probability.
+		A default dictionary of probabilities or a single float probability.
+		Note that the default value of the dictionary is in accordance with
+		the specified values of m and p. Thus, missing combinations of the
+		event and given variables are accounted for.
 	"""
 
 	def conditional(joint_freq, given_freq):
 		cond = (joint_freq + m * p) / (given_freq + m)
 		return cond if log_base is None else math.log(cond, log_base)
 
-	# Default probability of something not in the dictionary is 0.0.
 	if event_test is None:
 		counts = collections.Counter(event)
 		pr = collections.defaultdict(lambda: (m * p) / m)
