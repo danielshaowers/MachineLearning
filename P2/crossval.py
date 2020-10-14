@@ -12,6 +12,17 @@ def cross_validate(
 		learner: model.Model,
 		data: mldata.ExampleSet,
 		n_folds: int) -> Tuple[Tuple, Tuple]:
+	"""Performs stratified cross validation on a general learner and data set.
+
+	Args:
+		learner: Model instance whose task is train on the data.
+		data: Full set of training examples.
+		n_folds: Number of folds to perform cross validation.
+
+	Returns:
+		Two tuples, the first being the predictions of from each fold,
+		and then second being the corresponding labels.
+	"""
 	fold_predictions = []
 	fold_test_labels = []
 	if n_folds < 1:

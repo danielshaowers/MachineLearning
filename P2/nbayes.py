@@ -2,8 +2,7 @@ import functools
 import json
 import math
 from typing import Any, Callable, Collection, DefaultDict, Mapping, NoReturn, \
-	Optional, \
-	Sequence, Tuple, Union
+	Optional, Sequence, Tuple, Union
 
 import jsonpickle
 import numpy as np
@@ -15,8 +14,6 @@ import mlutil
 import model
 
 
-# TODO Update docstrings
-
 class NaiveBayes(model.Model):
 	"""A standard naive Bayes classifier.
 
@@ -25,8 +22,8 @@ class NaiveBayes(model.Model):
 	Attributes:
 		n_bins: Number of bins for discretizing continuous features. Must be
 			at least 2 in order to discretize the features.
-		laplace_smoothing_m: True will apply Laplace smoothing to the
-			probabilities of the model parameters.
+		laplace_m: True will apply Laplace smoothing to the probabilities of
+			the model parameters.
 		binners: A dictionary of partial discretization functions. Each
 			function corresponds to a continuous feature to be binned. Prior
 			to training the model, each continuous feature in the dataset is
@@ -38,7 +35,7 @@ class NaiveBayes(model.Model):
 	def __init__(
 			self,
 			n_bins: int = 2,
-			laplace_smoothing_m: Union[int, float] = 0,
+			laplace_m: Union[int, float] = 0,
 			binners: Mapping[mldata.Feature, Callable[[Any], int]] = None,
 			params: Mapping[mldata.Feature, Any] = None):
 		super(NaiveBayes, self).__init__()
@@ -48,14 +45,14 @@ class NaiveBayes(model.Model):
 				'features'
 			)
 		self.n_bins = n_bins
-		self.laplace_smoothing_m = laplace_smoothing_m
+		self.laplace_m = laplace_m
 		self.binners = dict() if binners is None else binners
 		self.params = dict() if params is None else params
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
 		n_bins = f'n_bins={self.n_bins}'
-		laplace_smoothing = f'laplace_smoothing_m={self.laplace_smoothing_m}'
+		laplace_smoothing = f'laplace_m={self.laplace_m}'
 		return f'{class_name}({n_bins}, {laplace_smoothing})'
 
 	def predict(self, data: mldata.ExampleSet) -> Tuple[float]:
@@ -70,7 +67,9 @@ class NaiveBayes(model.Model):
 			data: Collection of test examples.
 
 		Returns:
-			A tuple of confidence values, each corresponding to a test example.
+			A tuple of confidence values, each corresponding to a test
+			example. Note that confidence values assume a binary class label
+			and are relative to the "positive" class.
 
 		Raises:
 			AttributeError: If the model has not yet been trained.
@@ -110,7 +109,7 @@ class NaiveBayes(model.Model):
 			data: Collection of training examples.
 
 		Returns:
-			None.
+			None. Model parameters are stored in the params attribute.
 		"""
 		self.binners = self._preprocess(data)
 		self.params = self._naive_bayes(data)
@@ -139,6 +138,7 @@ class NaiveBayes(model.Model):
 				raise AttributeError('Preprocess the data first!')
 			if feature not in self.binners:
 				raise KeyError('Feature binner function not found.')
+			# Use the binner function to discretize the continuous feature.
 			exs = self.binners[feature](examples)
 		return exs
 
@@ -146,14 +146,12 @@ class NaiveBayes(model.Model):
 			self,
 			event: Collection,
 			given: Collection = None) -> DefaultDict[Any, float]:
+		"""The default dictionary of probabilities accounts for missing
+			feature value-class label combinations and uses the values of
+			m and v from Laplace smoothing to determine the default value."""
 		v = len(set(event))
 		p = 1 / v
-		if self.laplace_smoothing_m < 0:
-			m = v
-		elif self.laplace_smoothing_m > 0:
-			m = self.laplace_smoothing_m
-		else:
-			m = 0
+		m = v if self.laplace_m < 0 else self.laplace_m
 		return metrics.probability(
 			event=event, given=given, m=m, p=p, log_base=math.e)
 
@@ -186,11 +184,11 @@ class NaiveBayes(model.Model):
 			label: Any,
 			feature_value: Optional[Any] = None) -> Union[float, int]:
 		"""Get the model parameter for the given feature."""
-		f_value = self._get_feature_values(feature, feature_value)
 		# Indexing is slightly different if looking up the label probability
 		if feature_value is None:
 			param = self.params[feature][label]
 		else:
+			f_value = self._get_feature_values(feature, feature_value)
 			param = self.params[feature][(f_value, label)]
 		return param
 
@@ -198,7 +196,7 @@ class NaiveBayes(model.Model):
 		with open(file, 'w') as f:
 			saved = {
 				'n_bins': self.n_bins,
-				'laplace_smoothing_m': self.laplace_smoothing_m,
+				'laplace_m': self.laplace_m,
 				'binners': {
 					jsonpickle.dumps(feature): jsonpickle.dumps(binner)
 					for feature, binner in self.binners.items()
@@ -215,7 +213,7 @@ class NaiveBayes(model.Model):
 		with open(file) as f:
 			learner = json.load(f)
 			n_bins = learner['n_bins']
-			laplace_smoothing_m = learner['laplace_smoothing_m']
+			laplace_m = learner['laplace_m']
 			binners = {
 				jsonpickle.loads(feature): jsonpickle.loads(binner)
 				for feature, binner in learner['binners']
@@ -226,14 +224,14 @@ class NaiveBayes(model.Model):
 			}
 		return NaiveBayes(
 			n_bins=n_bins,
-			laplace_smoothing_m=laplace_smoothing_m,
+			laplace_m=laplace_m,
 			binners=binners,
 			params=params
 		)
 
 
 def main(path: str, skip_cv: bool, n_bins: int, m: Union[int, float]):
-	nb = NaiveBayes(n_bins=n_bins, laplace_smoothing_m=m)
+	nb = NaiveBayes(n_bins=n_bins, laplace_m=m)
 	mainutil.p2_main(path=path, learner=nb, skip_cv=skip_cv)
 
 

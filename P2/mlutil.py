@@ -1,26 +1,13 @@
+import collections
 import functools
 import operator
-from collections import Counter
 from numbers import Number
 from typing import Any, Callable, Collection, Dict, Generator, Iterable, \
-	Tuple, \
-	Union
+	Sequence, Tuple, Union
 
 import numpy as np
 
 import mldata
-
-"""
-DESIGN PHILOSOPHY: Each utility function that can return an iterable should 
-provide the functionality to either return a tuple or a generator. The former 
-is preferred over a list for its immutability. The latter is useful in cases 
-where the returned iterable is only needed for a single operation because it 
-use much more memory efficient than a standard tuple or list.
-
-Use type hints for parameters and return types, except when it is a nested 
-sequence, collection, iterable, etc. These help with static type checking 
-when developing and improve readability.
-"""
 
 
 def binarize_feature(
@@ -264,11 +251,11 @@ def is_homogeneous(data: mldata.ExampleSet) -> bool:
 
 
 def get_majority_label(data: mldata.ExampleSet):
-	return Counter(get_labels(data)).most_common(1)[0][0]
+	return collections.Counter(get_labels(data)).most_common(1)[0][0]
 
 
 def print_label_ratio(data: mldata.ExampleSet):
-	print(Counter(get_labels(data)).most_common())
+	print(collections.Counter(get_labels(data)).most_common())
 
 
 def get_feature_index(data: mldata.ExampleSet, feature: mldata.Feature) -> int:
@@ -350,9 +337,10 @@ def prediction_stats(scores, truths, threshold=0.5):
 
 
 # compute true pos, false pos, true neg, false neg
-def compute_tf_fp(predicted_labels: np.array, truths: np.array):
-	pos_truths = np.where(truths > 0)[0]
-	neg_truths = np.where(truths <= 0)[0]
+def compute_tf_fp(predicted_labels: Sequence, truths: Sequence):
+	labels = np.array(truths)
+	pos_truths = np.where(labels > 0)[0]
+	neg_truths = np.where(labels <= 0)[0]
 	tp = sum(1 for e in pos_truths if predicted_labels[e] == 1)
 	tn = sum(1 for i in neg_truths if predicted_labels[i] == 0)
 	fp = sum(1 for e in neg_truths if predicted_labels[e] == 1)

@@ -1,6 +1,5 @@
 import functools
-import random
-from typing import Set
+from typing import NoReturn, Set
 
 import numpy as np
 
@@ -23,7 +22,7 @@ class LogisticRegression(model.Model):
 		return mlutil.quantify_nominals(np_data, f_types)
 
 	def train(self, data: mldata.ExampleSet):
-		truths = mlutil.get_labels(data)
+		truths = np.array(mlutil.get_labels(data))
 		np_data = self.preprocess(data)
 		# randomly initialize weights for each feature
 		weights = np.random.rand(len(np_data))
@@ -67,7 +66,8 @@ class LogisticRegression(model.Model):
 		log_likelihood_scores = np.array([
 			self.sigmoid(sum(w)) for w in weighted_feats
 		])
-		return log_likelihood_scores >= 0.5, log_likelihood_scores
+		# TODO Why do we need both?
+		return log_likelihood_scores >= 0.5  # log_likelihood_scores
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
 	# sc in enumerate(log_likelihood_scores)]
@@ -131,6 +131,13 @@ class LogisticRegression(model.Model):
 		# gradient, stepsize)
 		return weights
 
+	def save(self, file: str) -> NoReturn:
+		pass
+
+	@staticmethod
+	def load(file: str):
+		pass
+
 
 def main(path: str, skip_cv: bool, cost: float):
 	learner = LogisticRegression(cost=cost)
@@ -138,12 +145,13 @@ def main(path: str, skip_cv: bool, cost: float):
 
 
 if __name__ == "__main__":
-	random.seed(a=12345)
-	parser = mainutil.base_arg_parser()
-	parser.add_argument(
-		'--cost',
-		type=float,
-		help='Cost term for negative conditional log likelihood'
-	)
-	args = parser.parse_args()
-	main(path=args.path, skip_cv=args.skip_cv, cost=args.cost)
+	main('..\\voting', True, 1)
+	# random.seed(a=12345)
+	# parser = mainutil.base_arg_parser()
+	# parser.add_argument(
+	# 	'--cost',
+	# 	type=float,
+	# 	help='Cost term for negative conditional log likelihood'
+	# )
+	# args = parser.parse_args()
+	# main(path=args.path, skip_cv=args.skip_cv, cost=args.cost)
