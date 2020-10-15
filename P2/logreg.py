@@ -15,7 +15,7 @@ import preprocess
 
 class LogisticRegression(model.Model):
 
-	def __init__(self, cost: float = 0.1, iterations=1000, weights=None, fold=1, stepsize=1):
+	def __init__(self, cost: float = 0.1, iterations=1000, weights=None, fold=1, stepsize=0.5):
 		super(LogisticRegression, self).__init__()
 		self.weights = weights
 		self.cost = cost
@@ -107,7 +107,7 @@ class LogisticRegression(model.Model):
 	# todo: for any binary variables, convert 0 and 1 to -1 and 1. look out
 	#  for normalization
 	# todo: check out overfitting control w/ c term and ||w||
-	def gradient_descent(self, ndata, truths, weights, stepsize, epsilon=1,
+	def gradient_descent(self, ndata, truths, weights, stepsize, epsilon=0.001,
 						 skip: Set = None):
 		if skip is None:
 			skip = set()
@@ -129,7 +129,6 @@ class LogisticRegression(model.Model):
 			res = np.zeros(len(ndata) - len(skip))
 			for j in (jj for jj in range(len(ndata)) if jj not in skip): #
 				res[counter] = np.sum(sig * ndata[j])
-				counter = counter + 1
 				# calculate the gradient wrt each feature
 				# summation = sum(
 				# 	self.gradient_func(
@@ -137,8 +136,9 @@ class LogisticRegression(model.Model):
 				# 		ndata[j][i], truths[i])
 				# 	for i, f in enumerate(ndata[j])  # i indexes examples
 				# )
-			gradient = 1 / (counter+1) * (res + self.cost * sum(weights))
-			finished = np.argwhere(abs(gradient) < epsilon)
+				gradient[j] = (1 / len(ndata[0])) * (res[counter]+ self.cost * weights[j])
+				counter = counter + 1
+			finished = np.argwhere(abs(gradient) < epsilon) # find which gradients we can stop
 			if len(finished) > 1:
 				[skip.add(f[0]) for f in finished]
 			# the derivative of ||W||^2 wrt any parameter is just that
@@ -172,8 +172,8 @@ class LogisticRegression(model.Model):
 		return LogisticRegression(cost=cost, iterations=iters, weights=weights, fold=fold)
 
 
-def main(path: str, skip_cv: bool, cost: float, iterations=100):
-	learner = LogisticRegression(cost=cost, iterations=iterations, )
+def main(path: str, skip_cv: bool, cost: float, iterations=1000):
+	learner = LogisticRegression(cost=cost, iterations=iterations, stepsize=0.5)
 	mainutil.p2_main(path, learner, skip_cv)
 
 
@@ -191,4 +191,4 @@ def command_line_main():
 
 if __name__ == "__main__":
 	# command_line_main()
-	main(path='..\\voting', skip_cv=True, cost=0.1)
+	main(path='..\\volcanoes', skip_cv=False, cost=0.1)

@@ -275,7 +275,7 @@ def quantify_nominals(data: np.array, types):
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
 				# avoids using 0, which is uninformative
-				quantified[z][id[0]] = (i + 1) / len(idxs)
+				quantified[z][id[0]] = (i + 1) / len(val_idxs)
 	return quantified
 
 
