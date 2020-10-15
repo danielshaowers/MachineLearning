@@ -2,13 +2,35 @@ import statistics
 from typing import Sequence
 
 from scipy.stats import stats
-
+import numpy as np
 import mldata
 import mlutil
 
 BINARY = mldata.Feature.Type.BINARY
 CONTINUOUS = mldata.Feature.Type.CONTINUOUS
 NOMINAL = mldata.Feature.Type.NOMINAL
+
+# normalize and standardize range
+def normalize(data: np.array, types):
+	indices = np.where(types == 'CONTINUOUS')[0]
+	for m, z in enumerate(indices): # each index is the feature of a continuous variable
+		#data[z] = stats.zscore(data[z])
+		data[z] = (data[z] - np.mean(data[z]))/np.std(data[z])
+		data[z] = (data[z] - np.min(data[z])) / (np.max(data[z]) - np.min(data[z]))
+	return data
+
+def adjust_binary(data: np.array, types):
+	indices = np.where(types == 'BINARY')[0]
+	for m,z in enumerate(indices):
+		data[z] = 2 * data[z] - 1
+	#for i,f in enumerate(types):
+#		if f == mldata.Feature.Type.CONTINUOUS:
+			#normalize feature
+#			data[i] = stats.zscore(continuous_exs[i])
+#		if f.type == mldata.Feature.Type.BINARY and any(f == ):
+
+	return data
+
 
 
 def standardize(data: mldata.ExampleSet) -> mldata.ExampleSet:

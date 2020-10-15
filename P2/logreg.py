@@ -14,7 +14,7 @@ import preprocess
 
 class LogisticRegression(model.Model):
 
-	def __init__(self, cost: float = 0.1, iterations=100, weights=None):
+	def __init__(self, cost: float = 0.1, iterations=100, weights=None, fold=1):
 		super(LogisticRegression, self).__init__()
 		self.weights = weights
 		self.cost = cost
@@ -31,8 +31,10 @@ class LogisticRegression(model.Model):
 		data = preprocess.standardize(data)
 		np_data, f_types = mlutil.convert_to_numpy(data)
 		np_data = mlutil.quantify_nominals(np_data, f_types)
-		return np.asarray(np_data, dtype='float64')
-
+		np_data =  np.asarray(np_data, dtype='float64')
+		np_data = preprocess.normalize(np_data, f_types)
+		np_data = preprocess.adjust_binary(np_data, f_types)
+		return np_data
 	def train(self, data: mldata.ExampleSet):
 		truths = np.array(mlutil.get_labels(data))
 		np_data = self.preprocess(data)
@@ -43,6 +45,8 @@ class LogisticRegression(model.Model):
 		self.weights = self.gradient_descent(
 			np_data, truths, weights, stepsize=1, skip=set()
 		)
+		self.save(self.getName() + str(self.fold) + "f_" + str(self.iterations) + "it_" + str(self.cost) + "cost_" + "length" + str(len(np_data)))
+	# okay now the weights should be finalized
 
 	@staticmethod
 	@functools.lru_cache(512)
@@ -58,22 +62,11 @@ class LogisticRegression(model.Model):
 			return z / (1 + z)
 
 	@staticmethod
-	@functools.lru_cache(512)
-	def weighted_input(x, weights):
-		return np.dot(x, weights)
-
-	@functools.lru_cache(512)
-	def prob(self, weight, x):
-		return self.sigmoid(self.weighted_input(weight, x))
-
-	@staticmethod
-	@functools.lru_cache(512)
 	def conditional(x, y):
 		# calculate log likelihood to maintain convexity instead of squared
 		# loss
 		return -y * np.math.log(x) - (1 - y) * np.math.log(1 - x)
 
-	@functools.lru_cache(512)
 	def predict(self, data: mldata.ExampleSet):
 		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
 		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
@@ -84,12 +77,12 @@ class LogisticRegression(model.Model):
 		log_likelihood_scores = np.array([
 			self.sigmoid(sum(w)) for w in weighted_feats
 		])
-
 		return log_likelihood_scores
+
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
 	# sc in enumerate(log_likelihood_scores)]
-	@functools.lru_cache(512)
+	
 	def conditional_log_likelihood(self, labels, sigmoids, weights):
 		poslabel_idx = np.argwhere(labels > 0)
 		neglabel_idx = np.argwhere(labels <= 0)
@@ -156,6 +149,7 @@ class LogisticRegression(model.Model):
 				'weights': self.weights.tolist(),
 				'cost': self.cost,
 				'iterations': self.iterations,
+				'fold': self.fold
 			}
 			json.dump(saved, f, indent='\t')
 
@@ -166,7 +160,8 @@ class LogisticRegression(model.Model):
 			weights = learner['weights']
 			cost = learner['cost']
 			iters = learner['iterations']
-		return LogisticRegression(cost=cost, iterations=iters, weights=weights)
+			fold = learner['fold']
+		return LogisticRegression(cost=cost, iterations=iters, weights=weights, fold=fold)
 
 
 def main(path: str, skip_cv: bool, cost: float, iterations=100):

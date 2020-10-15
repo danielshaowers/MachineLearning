@@ -330,9 +330,9 @@ def prediction_stats(scores, truths, threshold=0.5):
 	predicted_labels = predictions >= threshold
 	tp, tn, fp, fn = compute_tf_fp(predicted_labels, labels)
 	accuracy = sum(predicted_labels == labels) / len(labels)
-	precision = tp / (tp + fp)
-	recall = tp / (tp + fn)
-	specificity = tn / sum(labels == 0)
+	precision = tp / min((tp + fp), 1)
+	recall = tp / min((tp + fn), 1)
+	specificity = tn / min(sum(labels == 0), 1)
 	return accuracy, precision, recall, specificity, [tp, tn, fp, fn]
 
 
