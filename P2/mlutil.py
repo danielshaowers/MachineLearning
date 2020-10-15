@@ -275,7 +275,7 @@ def quantify_nominals(data: np.array, types):
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
 				# avoids using 0, which is uninformative
-				quantified[z][id[0]] = i + 1
+				quantified[z][id[0]] = (i + 1) / len(idxs)
 	return quantified
 
 
@@ -330,9 +330,9 @@ def prediction_stats(scores, truths, threshold=0.5):
 	predicted_labels = predictions >= threshold
 	tp, tn, fp, fn = compute_tf_fp(predicted_labels, labels)
 	accuracy = sum(predicted_labels == labels) / len(labels)
-	precision = tp / min((tp + fp), 1)
-	recall = tp / min((tp + fn), 1)
-	specificity = tn / min(sum(labels == 0), 1)
+	precision = tp / max((tp + fp), 1)
+	recall = tp / max((tp + fn), 1)
+	specificity = tn / max(sum(labels == 0), 1)
 	return accuracy, precision, recall, specificity, [tp, tn, fp, fn]
 
 

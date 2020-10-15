@@ -14,11 +14,13 @@ import preprocess
 
 class LogisticRegression(model.Model):
 
-	def __init__(self, cost: float = 0.1, iterations=100, weights=None, fold=1):
+	def __init__(self, cost: float = 0.1, iterations=1000, weights=None, fold=1, stepsize=1):
 		super(LogisticRegression, self).__init__()
 		self.weights = weights
 		self.cost = cost
 		self.iterations = iterations
+		self.fold = fold
+		self.stepsize = stepsize
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -28,7 +30,7 @@ class LogisticRegression(model.Model):
 
 	@staticmethod
 	def preprocess(data: mldata.ExampleSet):
-		data = preprocess.standardize(data)
+		#data = preprocess.standardize(data)
 		np_data, f_types = mlutil.convert_to_numpy(data)
 		np_data = mlutil.quantify_nominals(np_data, f_types)
 		np_data =  np.asarray(np_data, dtype='float64')
@@ -43,23 +45,22 @@ class LogisticRegression(model.Model):
 		# randomly initialize biases? should i even incorporate biases
 		bias = np.random.rand(len(np_data), 1)
 		self.weights = self.gradient_descent(
-			np_data, truths, weights, stepsize=1, skip=set()
+			np_data, truths, weights, stepsize=self.stepsize, skip=set()
 		)
-		self.save(self.getName() + str(self.fold) + "f_" + str(self.iterations) + "it_" + str(self.cost) + "cost_" + "length" + str(len(np_data)))
+		self.save(self.get_name() + str(self.fold) + "f_" + str(self.iterations) + "it_" + str(self.cost) + "cost_" + "length" + str(len(np_data)) + "step" + str(self.stepsize))
 	# okay now the weights should be finalized
 
 	@staticmethod
-	@functools.lru_cache(512)
 	#numerically stable sigmoid to prevent overflow errors
 	def sigmoid(x, bias=0):
-		if x >= 0:
-			z = np.exp(-x)
-			return 1 / (1 + z)
-		else:
+		#if x >= 0:
+		z = np.exp(-x - bias)
+		return 1 / (1 + z)
+		#else:
 			# if x is less than zero then z will be small, denom can't be
 			# zero because it's 1+z.
-			z = np.exp(x)
-			return z / (1 + z)
+	#	z = np.exp(x)
+	#	return z / (1 + z)
 
 	@staticmethod
 	def conditional(x, y):
@@ -82,7 +83,7 @@ class LogisticRegression(model.Model):
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
 	# sc in enumerate(log_likelihood_scores)]
-	
+
 	def conditional_log_likelihood(self, labels, sigmoids, weights):
 		poslabel_idx = np.argwhere(labels > 0)
 		neglabel_idx = np.argwhere(labels <= 0)
@@ -96,8 +97,7 @@ class LogisticRegression(model.Model):
 		return conditional_ll
 
 	# derivative of conditional log likelihood 1/2 ||w||^2 is 2x
-	def gradient_func(self, weights, weight, x_sum, x, y):
-		#return self.cost * weight / np.math.sqrt(sum(np.square(weights))) + (self.sigmoid(x_sum) - y) * x
+	def gradient_func(self, x_sum, x, y):
 		return  (self.sigmoid(x_sum) - y) * x
 
 	# identify the log loss and update parameters accordingly
@@ -112,23 +112,30 @@ class LogisticRegression(model.Model):
 		iterations = 0
 		while not (len(skip) == len(ndata) or iterations > self.iterations):
 			iterations = iterations + 1
+			counter = 0
 			weighted_feats = np.transpose(
 				np.array([np.multiply(weights[i],f) for i, f in enumerate(ndata)])
-			)  #
+			)
+			weighted_feats = preprocess.normalize(weighted_feats)#
 			# theta^T*x: multiply all examples for each feature value by its
 			# corresponding weight
 			# the calculations themselves give us ONE gradient for one
 			# feature. so we loop over all features and store results as an
 			# array
 			gradient = np.zeros(len(ndata))
-			for j in (jj for jj in range(len(ndata)) if jj not in skip):
-				summation = sum(
-					self.gradient_func(
-						weights, weights[j], sum(weighted_feats[:][i]),
-						ndata[j][i], truths[i])
-					for i, f in enumerate(ndata[j])  # i indexes examples
-				)
-				gradient[j] = (1 / len(ndata)) * summation
+			sig = self.sigmoid(np.sum(weighted_feats, axis=1), bias= np.sum(weights) / 2) - truths #-(np.sum(weights) / 2))
+			res = np.zeros(len(ndata) - len(skip))
+			for j in (jj for jj in range(len(ndata)) if jj not in skip): #
+				res[counter] = np.sum(sig * ndata[j])
+				counter = counter + 1
+				# calculate the gradient wrt each feature
+				# summation = sum(
+				# 	self.gradient_func(
+				# 		weights, weights[j], sum(weighted_feats[:][i]),
+				# 		ndata[j][i], truths[i])
+				# 	for i, f in enumerate(ndata[j])  # i indexes examples
+				# )
+			gradient = 1 / (counter+1) * np.sum(res)
 			finished = np.argwhere(abs(gradient) < epsilon)
 			if len(finished) > 0:
 				[skip.add(f[0]) for f in finished]
