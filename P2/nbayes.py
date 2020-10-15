@@ -229,7 +229,9 @@ class NaiveBayes(model.Model):
 			if len(parts := s.split('_')) == 1:
 				parsed = bool(util.strtobool(parts[0]))
 			else:
-				parsed = parts[0], bool(util.strtobool(parts[1]))
+				value = int(parts[0]) if parts[0].isnumeric() else parts[0]
+				label = bool(util.strtobool(parts[1]))
+				parsed = (value, label)
 			return parsed
 
 		with open(file) as f:
