@@ -4,6 +4,7 @@ import random
 from typing import NoReturn, Set
 
 import numpy as np
+from scipy.stats import stats
 
 import mainutil
 import mldata
@@ -21,6 +22,7 @@ class LogisticRegression(model.Model):
 		self.iterations = iterations
 		self.fold = fold
 		self.stepsize = stepsize
+		self.types =None
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -28,10 +30,10 @@ class LogisticRegression(model.Model):
 		iterations = f'iterations={self.iterations}'
 		return f'{class_name}({cost}, {iterations})'
 
-	@staticmethod
-	def preprocess(data: mldata.ExampleSet):
+	def preprocess(self, data: mldata.ExampleSet):
 		#data = preprocess.standardize(data)
 		np_data, f_types = mlutil.convert_to_numpy(data)
+		self.types = f_types
 		np_data = mlutil.quantify_nominals(np_data, f_types)
 		np_data =  np.asarray(np_data, dtype='float64')
 		np_data = preprocess.normalize(np_data, f_types)
@@ -116,14 +118,14 @@ class LogisticRegression(model.Model):
 			weighted_feats = np.transpose(
 				np.array([np.multiply(weights[i],f) for i, f in enumerate(ndata)])
 			)
-			weighted_feats = preprocess.normalize(weighted_feats)#
+			#weighted_feats = preprocess.normalize(weighted_feats)#
 			# theta^T*x: multiply all examples for each feature value by its
 			# corresponding weight
 			# the calculations themselves give us ONE gradient for one
 			# feature. so we loop over all features and store results as an
 			# array
 			gradient = np.zeros(len(ndata))
-			sig = self.sigmoid(np.sum(weighted_feats, axis=1), bias= np.sum(weights) / 2) - truths #-(np.sum(weights) / 2))
+			sig = self.sigmoid(np.sum(weighted_feats, axis=1), bias= 0) - truths #-(np.sum(weights) / 2))
 			res = np.zeros(len(ndata) - len(skip))
 			for j in (jj for jj in range(len(ndata)) if jj not in skip): #
 				res[counter] = np.sum(sig * ndata[j])
@@ -135,16 +137,15 @@ class LogisticRegression(model.Model):
 				# 		ndata[j][i], truths[i])
 				# 	for i, f in enumerate(ndata[j])  # i indexes examples
 				# )
-			gradient = 1 / (counter+1) * np.sum(res)
+			gradient = 1 / (counter+1) * (res + self.cost * sum(weights))
 			finished = np.argwhere(abs(gradient) < epsilon)
-			if len(finished) > 0:
+			if len(finished) > 1:
 				[skip.add(f[0]) for f in finished]
 			# the derivative of ||W||^2 wrt any parameter is just that
 			# parameter.
 			# (1/len(weights)) * self.cost * weight- (stepsize * self.cost /
 			# len(ndata)) * weights # update weights
-			weights = weights - stepsize * (
-						self.cost * (sum(weights)) + gradient)
+			weights = weights - stepsize * gradient #(self.cost * (sum(weights)) + gradient)
 		return weights
 
 	def get_name(self):
@@ -190,4 +191,4 @@ def command_line_main():
 
 if __name__ == "__main__":
 	# command_line_main()
-	main(path='..\\volcanoes', skip_cv=False, cost=0.1)
+	main(path='..\\voting', skip_cv=True, cost=0.1)

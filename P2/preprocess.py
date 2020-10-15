@@ -11,8 +11,11 @@ CONTINUOUS = mldata.Feature.Type.CONTINUOUS
 NOMINAL = mldata.Feature.Type.NOMINAL
 
 # normalize and standardize range
-def normalize(data: np.array, types):
-	indices = np.where(types == 'CONTINUOUS')[0]
+def normalize(data: np.array, types=None):
+	if types is None:
+		indices = range(len(data))
+	else:
+		indices = np.where(types == 'CONTINUOUS')[0]
 	for m, z in enumerate(indices): # each index is the feature of a continuous variable
 		#data[z] = stats.zscore(data[z])
 		data[z] = (data[z] - np.mean(data[z]))/np.std(data[z])
