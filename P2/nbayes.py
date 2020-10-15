@@ -291,10 +291,5 @@ def command_line_main():
 
 
 if __name__ == '__main__':
-	# main(path='..\\voting', skip_cv=False, n_bins=2, m=0)
+	main(path='..\\volcanoes', skip_cv=False, n_bins=2, m=2)
 	# command_line_main()
-	voting = mldata.parse_c45('voting', '..')
-	nb = NaiveBayes()
-	nb.train(voting)
-	nb.save('test_save.txt')
-	nb.load('test_save.txt')
