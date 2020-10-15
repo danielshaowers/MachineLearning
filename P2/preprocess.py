@@ -31,7 +31,7 @@ def standardize(data: mldata.ExampleSet) -> mldata.ExampleSet:
 	examples = []
 	for e, ex_val in enumerate(data):
 		example = mldata.Example(data.schema)
-		#f= the feature number, e the example index
+		# f is the feature number; e is the example index
 		example.features = [
 			standardized[f][e] if f in standardized else ex_val[f]
 			for f in range(len(data.schema))

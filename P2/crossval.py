@@ -11,13 +11,16 @@ import model
 def cross_validate(
 		learner: model.Model,
 		data: mldata.ExampleSet,
-		n_folds: int) -> Tuple[Tuple, Tuple]:
+		n_folds: int,
+		save_as: str = None) -> Tuple[Tuple, Tuple]:
 	"""Performs stratified cross validation on a general learner and data set.
 
 	Args:
 		learner: Model instance whose task is train on the data.
 		data: Full set of training examples.
 		n_folds: Number of folds to perform cross validation.
+		save_as: Base name of the file. Will be appended with the fold
+			iteration (if there are multiple folds) and .txt.
 
 	Returns:
 		Two tuples, the first being the predictions of from each fold,
@@ -36,6 +39,11 @@ def cross_validate(
 			train, test = get_train_test_split(folds, i)
 		learner.fold = i + min(n_folds, 2) - 1
 		learner.train(train)
+		if save_as:
+			if n_folds == 1:
+				learner.save(f'{save_as}.txt')
+			else:
+				learner.save(f'{save_as}_{i + 1}.txt')
 		fold_predictions.append(learner.predict(test))
 		fold_test_labels.append(mlutil.get_labels(test))
 	return tuple(fold_predictions), tuple(fold_test_labels)

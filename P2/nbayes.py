@@ -1,6 +1,9 @@
+import collections
 import functools
 import json
 import math
+import random
+from distutils import util
 from typing import Any, Callable, Collection, DefaultDict, Mapping, NoReturn, \
 	Optional, Sequence, Tuple, Union
 
@@ -37,8 +40,7 @@ class NaiveBayes(model.Model):
 			n_bins: int = 2,
 			laplace_m: Union[int, float] = 0,
 			binners: Mapping[mldata.Feature, Callable[[Any], int]] = None,
-			params: Mapping[mldata.Feature, Any] = None,
-			folds: int=1):
+			params: Mapping[mldata.Feature, Any] = None):
 		super(NaiveBayes, self).__init__()
 		if n_bins < 2:
 			raise ValueError(
@@ -49,7 +51,6 @@ class NaiveBayes(model.Model):
 		self.laplace_m = laplace_m
 		self.binners = dict() if binners is None else binners
 		self.params = dict() if params is None else params
-		self.folds = folds
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -135,7 +136,7 @@ class NaiveBayes(model.Model):
 			examples: Union[Any, Collection]) -> Union[Any, Collection]:
 		"""Discretize the examples if continuous."""
 		exs = examples
-		if feature.type is mldata.Feature.Type.CONTINUOUS:
+		if feature.type == mldata.Feature.Type.CONTINUOUS:
 			if len(self.binners) == 0:
 				raise AttributeError('Preprocess the data first!')
 			if feature not in self.binners:
@@ -167,7 +168,7 @@ class NaiveBayes(model.Model):
 		feature_examples = mlutil.get_feature_examples(data, as_dict=True)
 		return {
 			f: self._train_binner(ex) for f, ex in feature_examples.items()
-			if f.type is mldata.Feature.Type.CONTINUOUS
+			if f.type == mldata.Feature.Type.CONTINUOUS
 		}
 
 	def _train_binner(
@@ -196,25 +197,41 @@ class NaiveBayes(model.Model):
 
 	def save(self, file: str) -> NoReturn:
 		with open(file, 'w') as f:
-			saved = {
+			saved = collections.defaultdict(dict)
+			saved.update({
 				'n_bins': self.n_bins,
 				'laplace_m': self.laplace_m,
 				'binners': {
 					jsonpickle.dumps(feature): jsonpickle.dumps(binner)
 					for feature, binner in self.binners.items()
-				},
-				'params': {
-					jsonpickle.dumps(feature): param
-					for feature, param in self.params.items()
 				}
-			}
-			json.dump(saved, f)
+			})
+			for feature, f_params in self.params.items():
+				json_feature = jsonpickle.dumps(feature)
+				if feature.type == mldata.Feature.Type.CLASS:
+					saved['params'][json_feature] = dict(f_params)
+				else:
+					saved['params'][json_feature] = {
+						f'{val[0]}_{val[1]}': param
+						for val, param in f_params.items()
+					}
+				saved['params'][json_feature].update({
+					'default': f_params.default_factory()
+				})
+			json.dump(saved, f, indent='\t')
 
-	def getName(self):
-		return "nbayes"
+	def get_name(self):
+		return self.__class__.__name__
 
 	@staticmethod
 	def load(file: str):
+		def parse_key(s: str):
+			if len(parts := s.split('_')) == 1:
+				parsed = bool(util.strtobool(parts[0]))
+			else:
+				parsed = parts[0], bool(util.strtobool(parts[1]))
+			return parsed
+
 		with open(file) as f:
 			learner = json.load(f)
 			n_bins = learner['n_bins']
@@ -223,10 +240,23 @@ class NaiveBayes(model.Model):
 				jsonpickle.loads(feature): jsonpickle.loads(binner)
 				for feature, binner in learner['binners']
 			}
-			params = {
-				jsonpickle.loads(feature): param
-				for feature, param in learner['params']
-			}
+		params = dict()
+		for feature, f_params in learner['params'].items():
+			f_obj = jsonpickle.loads(feature)
+			f_dict = collections.defaultdict(lambda: f_params['default'])
+			if f_obj.type == mldata.Feature.Type.CLASS:
+				f_dict.update({
+					parse_key(label): param
+					for label, param in f_params.items() if label != 'default'
+				})
+			else:
+				f_dict.update({
+					parse_key(val_label): param
+					for val_label, param in f_params.items()
+					if val_label != 'default'
+				})
+			params[f_obj] = f_dict
+
 		return NaiveBayes(
 			n_bins=n_bins,
 			laplace_m=laplace_m,
@@ -240,25 +270,29 @@ def main(path: str, skip_cv: bool, n_bins: int, m: Union[int, float]):
 	mainutil.p2_main(path=path, learner=nb, skip_cv=skip_cv)
 
 
-if __name__ == '__main__':
-	import time
+def command_line_main():
+	random.seed(a=12345)
+	parser = mainutil.base_arg_parser()
+	parser.add_argument(
+		'--m',
+		type=float,
+		help='Value for m-estimates. m < 0 will use Laplace smoothing',
+		required=True)
+	parser.add_argument(
+		'--bins',
+		type=int,
+		help='Number of bins for continuous feature discretization (min 2)',
+		required=True
+	)
+	args = parser.parse_args()
+	main(path=args.path, skip_cv=args.skip_cv, n_bins=args.bins, m=args.m)
 
-	start = time.time()
-	main(path='..\\voting', skip_cv=False, n_bins=2, m=0)
-	stop = time.time()
-	print(f'RUNTIME: {round((stop - start) / 60, 3)} minutes')
-# random.seed(a=12345)
-# parser = mainutil.base_arg_parser()
-# parser.add_argument(
-# 	'--m',
-# 	type=float,
-# 	help='Value for m-estimates. m < 0 will use Laplace smoothing',
-# 	required=True)
-# parser.add_argument(
-# 	'--bins',
-# 	type=int,
-# 	help='Number of bins for continuous feature discretization (min 2)',
-# 	required=True
-# )
-# args = parser.parse_args()
-# main(path=args.path, skip_cv=args.skip_cv, n_bins=args.bins, m=args.m)
+
+if __name__ == '__main__':
+	# main(path='..\\voting', skip_cv=False, n_bins=2, m=0)
+	# command_line_main()
+	voting = mldata.parse_c45('voting', '..')
+	nb = NaiveBayes()
+	nb.train(voting)
+	nb.save('test_save.txt')
+	nb.load('test_save.txt')

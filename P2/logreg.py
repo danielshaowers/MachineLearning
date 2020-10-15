@@ -1,34 +1,30 @@
 import functools
-
-
 import json
 import random
-from typing import Set
-
 from typing import NoReturn, Set
 
-
-from typing import NoReturn, Set
-
-
-import jsonpickle
 import numpy as np
 
-import model, mainutil
-
+import mainutil
 import mldata
 import mlutil
+import model
 import preprocess
 
 
 class LogisticRegression(model.Model):
 
-	def __init__(self, cost: float = 0.1, iterations=100, fold =1):
+	def __init__(self, cost: float = 0.1, iterations=100, weights=None):
 		super(LogisticRegression, self).__init__()
-		self.weights = None
+		self.weights = weights
 		self.cost = cost
 		self.iterations = iterations
-		self.fold = fold
+
+	def __repr__(self):
+		class_name = f'{self.__class__.__name__}'
+		cost = f'cost={self.cost}'
+		iterations = f'iterations={self.iterations}'
+		return f'{class_name}({cost}, {iterations})'
 
 	@staticmethod
 	def preprocess(data: mldata.ExampleSet):
@@ -47,8 +43,6 @@ class LogisticRegression(model.Model):
 		self.weights = self.gradient_descent(
 			np_data, truths, weights, stepsize=1, skip=set()
 		)
-		self.save(self.getName() + str(self.fold) + "f_" + str(self.iterations) + "it_" + str(self.cost) + "cost_" + "length" + str(len(np_data)))
-	# okay now the weights should be finalized
 
 	@staticmethod
 	@functools.lru_cache(512)
@@ -91,9 +85,7 @@ class LogisticRegression(model.Model):
 			self.sigmoid(sum(w)) for w in weighted_feats
 		])
 
-
 		return log_likelihood_scores
-
 
 	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
 	# sc in enumerate(log_likelihood_scores)]
@@ -109,7 +101,8 @@ class LogisticRegression(model.Model):
 		neg_log_cond_like = pos_log_sigmoids + neg_log_sigmoids
 		conditional_ll = 0.5 * squared_norm + self.cost * neg_log_cond_like
 		return conditional_ll
-	#derivative of conditional log likelihood 1/2 ||w||^2 is 2x
+
+	# derivative of conditional log likelihood 1/2 ||w||^2 is 2x
 	def gradient_func(self, weights, weight, x_sum, x, y):
 		#return self.cost * weight / np.math.sqrt(sum(np.square(weights))) + (self.sigmoid(x_sum) - y) * x
 		return  (self.sigmoid(x_sum) - y) * x
@@ -132,42 +125,39 @@ class LogisticRegression(model.Model):
 			# theta^T*x: multiply all examples for each feature value by its
 			# corresponding weight
 			# the calculations themselves give us ONE gradient for one
-			# feature. so we loop over all features and store results as an array
+			# feature. so we loop over all features and store results as an
+			# array
 			gradient = np.zeros(len(ndata))
 			for j in (jj for jj in range(len(ndata)) if jj not in skip):
 				summation = sum(
 					self.gradient_func(
-						weights, weights[j], sum(weighted_feats[:][i]), ndata[j][i], truths[i])
+						weights, weights[j], sum(weighted_feats[:][i]),
+						ndata[j][i], truths[i])
 					for i, f in enumerate(ndata[j])  # i indexes examples
 				)
 				gradient[j] = (1 / len(ndata)) * summation
 			finished = np.argwhere(abs(gradient) < epsilon)
 			if len(finished) > 0:
 				[skip.add(f[0]) for f in finished]
-			# the derivative of ||W||^2 wrt any parameter is just that parameter.
-			weights = weights - stepsize * (self.cost * (sum(weights)) + gradient)  #(1/len(weights)) * self.cost * weight- (stepsize * self.cost / len(ndata)) * weights # update weights
+			# the derivative of ||W||^2 wrt any parameter is just that
+			# parameter.
+			# (1/len(weights)) * self.cost * weight- (stepsize * self.cost /
+			# len(ndata)) * weights # update weights
+			weights = weights - stepsize * (
+						self.cost * (sum(weights)) + gradient)
 		return weights
 
+	def get_name(self):
+		return self.__class__.__name__
+
 	def save(self, file: str) -> NoReturn:
-		pass
-
-	@staticmethod
-	def load(file: str):
-		pass
-
-
-	def getName(self):
-		return "logreg"
-
-	def save(self, file: str):
 		with open(file, 'w') as f:
 			saved = {
 				'weights': self.weights.tolist(),
 				'cost': self.cost,
 				'iterations': self.iterations,
-				'fold': self.fold
 			}
-			json.dump(saved, f)
+			json.dump(saved, f, indent='\t')
 
 	@staticmethod
 	def load(file: str):
@@ -175,28 +165,27 @@ class LogisticRegression(model.Model):
 			learner = json.load(f)
 			weights = learner['weights']
 			cost = learner['cost']
-			iterations = learner['iterations']
-			fold = learner['fold']
-		return (
-			learner, weights, cost, iterations, fold
-		)
+			iters = learner['iterations']
+		return LogisticRegression(cost=cost, iterations=iters, weights=weights)
 
 
 def main(path: str, skip_cv: bool, cost: float, iterations=100):
-	learner = LogisticRegression(cost=cost, iterations = iterations,)
+	learner = LogisticRegression(cost=cost, iterations=iterations, )
 	mainutil.p2_main(path, learner, skip_cv)
 
 
-if __name__ == "__main__":
-
-
+def command_line_main():
 	random.seed(a=12345)
-	main(path = '..\\volcanoes', skip_cv = 0, cost=0.1)
-#	parser = mainutil.base_arg_parser()
-#	parser.add_argument(
-#		'--cost',
-#		type=float,
-#		help='Cost term for negative conditional log likelihood'
-#	)
-#	args = parser.parse_args()
-#	main(path=args.path, skip_cv=args.skip_cv, cost=args.cost)
+	parser = mainutil.base_arg_parser()
+	parser.add_argument(
+		'--cost',
+		type=float,
+		help='Cost term for negative conditional log likelihood'
+	)
+	args = parser.parse_args()
+	main(path=args.path, skip_cv=args.skip_cv, cost=args.cost)
+
+
+if __name__ == "__main__":
+	# command_line_main()
+	main(path='..\\volcanoes', skip_cv=False, cost=0.1)

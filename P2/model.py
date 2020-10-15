@@ -15,8 +15,9 @@ class Model(abc.ABC):
 	def __init__(self):
 		super(Model, self).__init__()
 		self.params = None
+
 	@abc.abstractmethod
-	def getName(self):
+	def get_name(self):
 		pass
 
 	@abc.abstractmethod

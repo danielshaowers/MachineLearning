@@ -242,7 +242,8 @@ def probability(
 
 	if event_test is None:
 		counts = collections.Counter(event)
-		pr = collections.defaultdict(lambda: (m * p) / m)
+		default = (m * p) / m if m != 0 else 0
+		pr = collections.defaultdict(lambda: default)
 		if log_base is None:
 			pr.update({e: freq / len(event) for e, freq in counts.items()})
 		else:
