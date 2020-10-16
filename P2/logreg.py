@@ -32,7 +32,6 @@ class LogisticRegression(model.Model):
 
 	@staticmethod
 	def preprocess(data: mldata.ExampleSet):
-		# data = preprocess.standardize(data)
 		np_data, f_types = mlutil.convert_to_numpy(data)
 		np_data = mlutil.quantify_nominals(np_data, f_types)
 		np_data = np.asarray(np_data, dtype='float64')
@@ -42,6 +41,7 @@ class LogisticRegression(model.Model):
 
 	def train(self, data: mldata.ExampleSet):
 		truths = np.array(mlutil.get_labels(data))
+		# perform preprocessing of data: quantify nominal features
 		np_data = self.preprocess(data)
 		self.weights = self.gradient_descent(np_data, truths)
 
@@ -92,9 +92,6 @@ class LogisticRegression(model.Model):
 
 	# identify the log loss and update parameters accordingly
 	# repeat
-	# todo: for any binary variables, convert 0 and 1 to -1 and 1. look out
-	#  for normalization
-	# todo: check out overfitting control w/ c term and ||w||
 	def gradient_descent(self, data, truths, epsilon=0.001):
 		# randomly initialize weights for each feature
 		weights = np.random.rand(len(data))
@@ -119,11 +116,9 @@ class LogisticRegression(model.Model):
 				# TODO (1 / len(data[0])) only needs to be computed once
 				gradient[f] = (1 / len(data[0])) * (
 						results[i] + self.cost * weights[f])
-			# find which gradients we can stop
+			# find which feature gradients we can stop
 			finished = np.argwhere(abs(gradient) < epsilon)
 			skip.update(f[0] for f in finished)
-			# derivative of ||W||^2 wrt any parameter is just that parameter.
-			# update weights
 			weights = weights - self.step_size * gradient
 		return weights
 
@@ -170,4 +165,4 @@ def command_line_main():
 
 if __name__ == "__main__":
 	# command_line_main()
-	main(path='..\\volcanoes', skip_cv=False, cost=0.1)
+	main(path='..\\voting', skip_cv=True, cost=0.1, iterations=1000)

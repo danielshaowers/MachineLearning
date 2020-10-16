@@ -290,24 +290,34 @@ def convert_to_numpy(data: mldata.ExampleSet):
 def compute_roc(scores, truths):
 	predictions = np.array(scores)
 	labels = np.array(truths)
-	thresholds = np.unique(predictions)
-	coordinates = np.zeros([len(thresholds), 2])
+	sorted_ind = np.argsort(scores)
+	sorted_labels = labels[sorted_ind]
+	sorted_scores = predictions[sorted_ind]
+	thresholds, thresh_idxs = np.unique(sorted_scores, return_index=True) #
+	coordinates = np.zeros([len(thresholds) + 1, 2])
 	best_point = [-1, -1]
-	for i, thresh in enumerate(thresholds):
-		accuracy, precision, recall, specificity, tps = prediction_stats(
-			predictions, labels, threshold=thresh
-		)
-		tp = tps[0]
-		tn = tps[1]
-		fp = tps[2]
-		fn = tps[3]
-		coordinates[i][0] = fp / (tn + fp)  # fpr
-		coordinates[i][1] = tp / (tp + fn)  # tpr
-		ratio = precision / recall if recall != 0 else 0
-		if ratio > best_point[0]:
-			best_point[0] = ratio
-			best_point[1] = thresh
-	# now we have all the tpr's and fpr's for every threshold
+	tot_p = np.sum(labels) # total positive
+	tot_n = len(labels) - tot_p # track total negative
+	thresh_idxs = np.append(thresh_idxs, len(labels), len(labels))
+
+	#curr_thresh = range(0, thresh_idxs[1])
+	#tp = sum(sorted_labels[curr_thresh])  # count of positive labels with our labels
+	#fp = thresh_idxs[1]  # only considerinig below thresh, so we only consider curr thresh
+	tp = 0
+	fp = 0
+	#coordinates[0][0] = tp / tot_p  # tpr
+	#coordinates[0][1] = fp / tot_n  # fpr
+	for i in range(0, len(thresh_idxs) - 1):
+		#just track tp, fp, and total pos, total neg
+		curr_thresh = range(thresh_idxs[i], thresh_idxs[i+1])
+		tp = tp + np.sum(sorted_labels[curr_thresh]) # count of positive labels with our labels
+		fp = fp + thresh_idxs[i+1] - thresh_idxs[i] - np.sum(sorted_labels[curr_thresh]) # only considerinig below thresh, so we only consider curr thresh
+		coordinates[len(coordinates) - i - 2][0] = tp / tot_p # tpr
+		coordinates[len(coordinates) - i - 2][1] = fp / tot_n # fpr
+		prec = tp / (tp + fp)
+		rec = tp / tot_p
+		best_point[0] = prec/rec
+		best_point[1] = thresholds[i]
 	# next compute area underneath by trapezoidal area approximation
 	auc = 0
 	end_x = 1
