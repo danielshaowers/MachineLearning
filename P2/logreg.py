@@ -15,11 +15,11 @@ import preprocess
 
 class LogisticRegression(model.Model):
 
-	def __init__(self, cost: float = 0.1, iterations=1000, weights=None, fold=1, stepsize=0.5):
+	def __init__(self, cost: float = 0.1, iterations=10, weights=None, fold=1, stepsize=0.5):
 		super(LogisticRegression, self).__init__()
 		self.weights = weights
 		self.cost = cost
-		self.iterations = iterations
+		self.iterations = 500
 		self.fold = fold
 		self.stepsize = stepsize
 		self.types =None
@@ -31,7 +31,6 @@ class LogisticRegression(model.Model):
 		return f'{class_name}({cost}, {iterations})'
 
 	def preprocess(self, data: mldata.ExampleSet):
-		#data = preprocess.standardize(data)
 		np_data, f_types = mlutil.convert_to_numpy(data)
 		self.types = f_types
 		np_data = mlutil.quantify_nominals(np_data, f_types)
@@ -41,11 +40,10 @@ class LogisticRegression(model.Model):
 		return np_data
 	def train(self, data: mldata.ExampleSet):
 		truths = np.array(mlutil.get_labels(data))
+		# perform preprocessing of data: quantify nominal features
 		np_data = self.preprocess(data)
 		# randomly initialize weights for each feature
 		weights = np.random.rand(len(np_data))
-		# randomly initialize biases? should i even incorporate biases
-		bias = np.random.rand(len(np_data), 1)
 		self.weights = self.gradient_descent(
 			np_data, truths, weights, stepsize=self.stepsize, skip=set()
 		)
@@ -53,26 +51,17 @@ class LogisticRegression(model.Model):
 	# okay now the weights should be finalized
 
 	@staticmethod
-	#numerically stable sigmoid to prevent overflow errors
 	def sigmoid(x, bias=0):
-		#if x >= 0:
 		z = np.exp(-x - bias)
 		return 1 / (1 + z)
-		#else:
-			# if x is less than zero then z will be small, denom can't be
-			# zero because it's 1+z.
-	#	z = np.exp(x)
-	#	return z / (1 + z)
+
 
 	@staticmethod
 	def conditional(x, y):
-		# calculate log likelihood to maintain convexity instead of squared
-		# loss
+		# calculate log likelihood to maintain convexity instead of squared loss
 		return -y * np.math.log(x) - (1 - y) * np.math.log(1 - x)
 
 	def predict(self, data: mldata.ExampleSet):
-		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
-		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
 		np_data = self.preprocess(data)
 		weighted_feats = np.transpose(
 			np.array([self.weights[i] * f for i, f in enumerate(np_data)]))
@@ -82,9 +71,6 @@ class LogisticRegression(model.Model):
 		])
 		return log_likelihood_scores
 
-
-	# return [model.Prediction(value=sc > 0.5, confidence=sc) for i,
-	# sc in enumerate(log_likelihood_scores)]
 
 	def conditional_log_likelihood(self, labels, sigmoids, weights):
 		poslabel_idx = np.argwhere(labels > 0)
@@ -103,10 +89,6 @@ class LogisticRegression(model.Model):
 		return  (self.sigmoid(x_sum) - y) * x
 
 	# identify the log loss and update parameters accordingly
-	# repeat
-	# todo: for any binary variables, convert 0 and 1 to -1 and 1. look out
-	#  for normalization
-	# todo: check out overfitting control w/ c term and ||w||
 	def gradient_descent(self, ndata, truths, weights, stepsize, epsilon=0.001,
 						 skip: Set = None):
 		if skip is None:
@@ -118,34 +100,20 @@ class LogisticRegression(model.Model):
 			weighted_feats = np.transpose(
 				np.array([np.multiply(weights[i],f) for i, f in enumerate(ndata)])
 			)
-			#weighted_feats = preprocess.normalize(weighted_feats)#
-			# theta^T*x: multiply all examples for each feature value by its
-			# corresponding weight
-			# the calculations themselves give us ONE gradient for one
-			# feature. so we loop over all features and store results as an
-			# array
 			gradient = np.zeros(len(ndata))
+			#run sigmoid function on wx -
 			sig = self.sigmoid(np.sum(weighted_feats, axis=1), bias= 0) - truths #-(np.sum(weights) / 2))
 			res = np.zeros(len(ndata) - len(skip))
-			for j in (jj for jj in range(len(ndata)) if jj not in skip): #
+			for j in (jj for jj in range(len(ndata)) if jj not in skip):
 				res[counter] = np.sum(sig * ndata[j])
-				# calculate the gradient wrt each feature
-				# summation = sum(
-				# 	self.gradient_func(
-				# 		weights, weights[j], sum(weighted_feats[:][i]),
-				# 		ndata[j][i], truths[i])
-				# 	for i, f in enumerate(ndata[j])  # i indexes examples
-				# )
+				# the derivative of conditional log likelihood with R
 				gradient[j] = (1 / len(ndata[0])) * (res[counter]+ self.cost * weights[j])
 				counter = counter + 1
 			finished = np.argwhere(abs(gradient) < epsilon) # find which gradients we can stop
 			if len(finished) > 1:
 				[skip.add(f[0]) for f in finished]
-			# the derivative of ||W||^2 wrt any parameter is just that
-			# parameter.
-			# (1/len(weights)) * self.cost * weight- (stepsize * self.cost /
-			# len(ndata)) * weights # update weights
-			weights = weights - stepsize * gradient #(self.cost * (sum(weights)) + gradient)
+
+			weights = weights - stepsize * gradient
 		return weights
 
 	def get_name(self):
@@ -172,7 +140,7 @@ class LogisticRegression(model.Model):
 		return LogisticRegression(cost=cost, iterations=iters, weights=weights, fold=fold)
 
 
-def main(path: str, skip_cv: bool, cost: float, iterations=1000):
+def main(path: str, skip_cv: bool, cost: float, iterations=500):
 	learner = LogisticRegression(cost=cost, iterations=iterations, stepsize=0.5)
 	mainutil.p2_main(path, learner, skip_cv)
 
@@ -191,4 +159,4 @@ def command_line_main():
 
 if __name__ == "__main__":
 	# command_line_main()
-	main(path='..\\volcanoes', skip_cv=False, cost=0.1)
+	main(path='..\\voting', skip_cv=True, cost=0.1, iterations=1000)
