@@ -303,15 +303,15 @@ def compute_roc(scores, truths):
 	#curr_thresh = range(0, thresh_idxs[1])
 	#tp = sum(sorted_labels[curr_thresh])  # count of positive labels with our labels
 	#fp = thresh_idxs[1]  # only considerinig below thresh, so we only consider curr thresh
-	tp = 0
-	fp = 0
+	tp = sum(sorted_labels)
+	fp = len(sorted_labels) - tp
 	#coordinates[0][0] = tp / tot_p  # tpr
 	#coordinates[0][1] = fp / tot_n  # fpr
 	for i in range(0, len(thresh_idxs) - 1):
 		#just track tp, fp, and total pos, total neg
 		curr_thresh = range(thresh_idxs[i], thresh_idxs[i+1])
-		tp = tp + np.sum(sorted_labels[curr_thresh]) # count of positive labels with our labels
-		fp = fp + thresh_idxs[i+1] - thresh_idxs[i] - np.sum(sorted_labels[curr_thresh]) # only considerinig below thresh, so we only consider curr thresh
+		tp = tp - np.sum(sorted_labels[curr_thresh]) # count of positive labels with our labels
+		fp = fp - thresh_idxs[i+1] + thresh_idxs[i] + np.sum(sorted_labels[curr_thresh]) # only considerinig below thresh, so we only consider curr thresh
 		coordinates[len(coordinates) - i - 2][0] = tp / tot_p # tpr
 		coordinates[len(coordinates) - i - 2][1] = fp / tot_n # fpr
 		prec = tp / (tp + fp)
