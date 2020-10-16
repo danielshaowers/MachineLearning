@@ -269,9 +269,10 @@ def get_label_info(data: mldata.ExampleSet) -> mldata.Feature:
 def quantify_nominals(data: np.array, types):
 	indices = np.where(types == 'NOMINAL')[0]
 	categories = [np.unique(data[i]) for i in indices]
-	quantified = data #np.ndarray([len(data), len(data[0])], dtype='int64')
+	quantified = data
 	for m, z in enumerate(indices):
-		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]] # find indices of each category
+		# find indices of each category
+		val_idxs = [np.argwhere(cat == data[z]) for cat in categories[m]]
 		for i, idxs in enumerate(val_idxs):
 			for id in idxs:
 				# avoids using 0, which is uninformative
@@ -293,30 +294,27 @@ def compute_roc(scores, truths):
 	sorted_ind = np.argsort(scores)
 	sorted_labels = labels[sorted_ind]
 	sorted_scores = predictions[sorted_ind]
-	thresholds, thresh_idxs = np.unique(sorted_scores, return_index=True) #
+	thresholds, thresh_idxs = np.unique(sorted_scores, return_index=True)
 	coordinates = np.zeros([len(thresholds) + 1, 2])
 	best_point = [-1, -1]
-	tot_p = np.sum(labels) # total positive
-	tot_n = len(labels) - tot_p # track total negative
+	tot_p = np.sum(labels)  # total positive
+	tot_n = len(labels) - tot_p  # track total negative
 	thresh_idxs = np.append(thresh_idxs, len(labels), len(labels))
 
-	#curr_thresh = range(0, thresh_idxs[1])
-	#tp = sum(sorted_labels[curr_thresh])  # count of positive labels with our labels
-	#fp = thresh_idxs[1]  # only considerinig below thresh, so we only consider curr thresh
 	tp = 0
 	fp = 0
-	#coordinates[0][0] = tp / tot_p  # tpr
-	#coordinates[0][1] = fp / tot_n  # fpr
 	for i in range(0, len(thresh_idxs) - 1):
-		#just track tp, fp, and total pos, total neg
-		curr_thresh = range(thresh_idxs[i], thresh_idxs[i+1])
-		tp = tp + np.sum(sorted_labels[curr_thresh]) # count of positive labels with our labels
-		fp = fp + thresh_idxs[i+1] - thresh_idxs[i] - np.sum(sorted_labels[curr_thresh]) # only considerinig below thresh, so we only consider curr thresh
-		coordinates[len(coordinates) - i - 2][0] = tp / tot_p # tpr
-		coordinates[len(coordinates) - i - 2][1] = fp / tot_n # fpr
-		prec = tp / (tp + fp)
-		rec = tp / tot_p
-		best_point[0] = prec/rec
+		# just track tp, fp, and total pos, total neg
+		# count of positive labels with our labels
+		tp += np.sum(sorted_labels[thresh_idxs[i]])
+		# only considering below thresh, so we only consider curr thresh
+		thresh_idx_diff = thresh_idxs[i + 1] - thresh_idxs[i]
+		fp += thresh_idx_diff - np.sum(sorted_labels[thresh_idxs[i]])
+		coordinates[len(coordinates) - i - 2][0] = tp / tot_p  # tpr
+		coordinates[len(coordinates) - i - 2][1] = fp / tot_n  # fpr
+		precision = tp / (tp + fp)
+		recall = tp / tot_p
+		best_point[0] = precision / recall
 		best_point[1] = thresholds[i]
 	# next compute area underneath by trapezoidal area approximation
 	auc = 0

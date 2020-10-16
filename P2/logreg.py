@@ -41,7 +41,7 @@ class LogisticRegression(model.Model):
 
 	def train(self, data: mldata.ExampleSet):
 		truths = np.array(mlutil.get_labels(data))
-		# perform preprocessing of data: quantify nominal features
+		# perform pre-processing of data: quantify nominal features
 		np_data = self.preprocess(data)
 		self.weights = self.gradient_descent(np_data, truths)
 
@@ -64,8 +64,6 @@ class LogisticRegression(model.Model):
 			raise ValueError('There are no examples to predict!')
 		if len(self.weights) == 0:
 			raise AttributeError('Train the model first!')
-		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
-		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
 		np_data = self.preprocess(data)
 		weighted = [self.weights[i] * f for i, f in enumerate(np_data)]
 		weighted = np.array(weighted).T
