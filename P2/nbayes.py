@@ -292,5 +292,5 @@ def command_line_main():
 
 
 if __name__ == '__main__':
-	main(path='..\\volcanoes', skip_cv=False, n_bins=2, m=2)
-# command_line_main()
+	# main(path='..\\voting', skip_cv=False, n_bins=2, m=2)
+	command_line_main()
