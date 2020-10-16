@@ -301,30 +301,27 @@ def compute_roc(scores, truths):
 	tot_n = len(labels) - tot_p  # track total negative
 	thresh_idxs = np.append(thresh_idxs, len(labels), len(labels))
 
-	#curr_thresh = range(0, thresh_idxs[1])
-	#tp = sum(sorted_labels[curr_thresh])  # count of positive labels with our labels
-	#fp = thresh_idxs[1]  # only considerinig below thresh, so we only consider curr thresh
 	tp = sum(sorted_labels)
 	fp = len(sorted_labels) - tp
-	#coordinates[0][0] = tp / tot_p  # tpr
-	#coordinates[0][1] = fp / tot_n  # fpr
-	for i in range(0, len(thresh_idxs) - 1):
-		#just track tp, fp, and total pos, total neg
-		curr_thresh = range(thresh_idxs[i], thresh_idxs[i+1])
-		tp = tp - np.sum(sorted_labels[curr_thresh]) # count of positive labels with our labels
-		fp = fp - thresh_idxs[i+1] + thresh_idxs[i] + np.sum(sorted_labels[curr_thresh]) # only considerinig below thresh, so we only consider curr thresh
-		coordinates[len(coordinates) - i - 2][0] = tp / tot_p # tpr
-		coordinates[len(coordinates) - i - 2][1] = fp / tot_n # fpr
-		prec = tp / (tp + fp)
-		rec = tp / tot_p
-		best_point[0] = prec/rec
+	for i in range(len(thresh_idxs) - 1):
+		# just track tp, fp, and total pos, total neg
+		curr_thresh = range(thresh_idxs[i], thresh_idxs[i + 1])
+		tp -= np.sum(sorted_labels[curr_thresh])
+		# only considering below thresh, so we only consider curr thresh
+		thresh_idx_diff = thresh_idxs[i] - thresh_idxs[i + 1]
+		fp += thresh_idx_diff + np.sum(sorted_labels[curr_thresh])
+		coordinates[len(coordinates) - i - 2][0] = tp / tot_p  # tpr
+		coordinates[len(coordinates) - i - 2][1] = fp / tot_n  # fpr
+		precision = tp / (tp + fp)
+		recall = tp / tot_p
+		best_point[0] = precision / recall
 		best_point[1] = thresholds[i]
 	# next compute area underneath by trapezoidal area approximation
 	auc = 0
 	end_x = 1
 	end_y = 1
 	coordinates[len(coordinates) - 1] = [0, 0]  # edge case
-	for i, coord in enumerate(coordinates):
+	for coord in coordinates:
 		start_x = coord[0]
 		start_y = coord[1]
 		# get area of trapezoidal region
