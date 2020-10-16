@@ -312,9 +312,9 @@ def compute_roc(scores, truths):
 		fp += thresh_idx_diff + np.sum(sorted_labels[curr_thresh])
 		coordinates[len(coordinates) - i - 2][0] = tp / tot_p  # tpr
 		coordinates[len(coordinates) - i - 2][1] = fp / tot_n  # fpr
-		precision = tp / (tp + fp)
+		precision = tp / (tp + fp) if tp + fp != 0 else 0
 		recall = tp / tot_p
-		best_point[0] = precision / recall
+		best_point[0] = precision / recall if recall != 0 else 0
 		best_point[1] = thresholds[i]
 	# next compute area underneath by trapezoidal area approximation
 	auc = 0

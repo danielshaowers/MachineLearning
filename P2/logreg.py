@@ -14,7 +14,8 @@ import preprocess
 class LogisticRegression(model.Model):
 
 	def __init__(
-			self, cost: float = 0.1,
+			self,
+			cost: float = 0.1,
 			iterations: int = 1000,
 			step_size: float = 0.5,
 			weights=None):
@@ -142,7 +143,7 @@ class LogisticRegression(model.Model):
 		return LogisticRegression(cost=cost, iterations=iters, weights=weights)
 
 
-def main(path: str, skip_cv: bool, cost: float, iterations=500):
+def main(path: str, skip_cv: bool, cost: float, iterations=1000):
 	learner = LogisticRegression(
 		cost=cost, iterations=iterations, step_size=0.5
 	)

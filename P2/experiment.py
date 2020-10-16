@@ -1,7 +1,9 @@
 from typing import Generator, Iterable, Mapping, NoReturn, Sequence, Tuple
 
+import logreg
 import mldata
 import model
+import nbayes
 
 
 class NaiveLogisticRegression(model.Model):
@@ -9,12 +11,12 @@ class NaiveLogisticRegression(model.Model):
 	the prediction of a naive Bayes model when the confidence of a predicted
 	class label by logistic regression is within some margin of 0.5.
 
-	Under the hood, a naive logistic regression model is fully trained naive
+	Under the hood, a naive logistic regression model is a fully trained naive
 	Bayes model and a fully trained logistic regression model, assumed to be
 	trained on the same training data, or at least on data from the same
 	dataset.
 
-	The margin is real-valued number between 0 and 1, inclusive, that defines
+	The margin is a real-valued number between 0 and 1, inclusive, that defines
 	the region around 0.5 that is considered "uncertain." When making
 	predictions, there are two possibilities. If the confidence of a
 	prediction by logistic regression is outside the margin, then the
@@ -32,19 +34,19 @@ class NaiveLogisticRegression(model.Model):
 	That is, if the sum of the confidence rankings from both models exceeds
 	the total number of examples predicted with a confidence above 0.5. The
 	intuition behind this threshold is that only examples predicted with
-	sufficiently relative confidence by naive Bayes and logistic regression
-	will be predicted as the positive label. By using rank, skew in
-	the confidence distribution does not affect the decision metric. This
+	sufficient relative confidence by naive Bayes and logistic regression
+	will be predicted as the positive label. By using rank, skew in the
+	confidence distribution does not affect the decision metric. This
 	primarily applies to naive Bayes in which confidences will be
 	concentrated around 0 and 1.
 	"""
 
 	def __init__(
 			self,
-			naive_bayes: model.Model,
-			log_reg: model.Model,
+			naive_bayes: nbayes.NaiveBayes,
+			log_reg: logreg.LogisticRegression,
 			use_rank: bool = False,
-			margin: float = 0.2,
+			margin: float = 0.1,
 			re_train: bool = False):
 		super(NaiveLogisticRegression, self).__init__()
 		self.naive_bayes = naive_bayes

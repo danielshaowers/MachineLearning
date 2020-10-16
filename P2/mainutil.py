@@ -13,6 +13,7 @@ def p2_main(
 		learner: model.Model,
 		skip_cv: bool,
 		print_results: bool = True,
+		is_experiment: bool = False,
 		save_as: str = None):
 	file_base, root_dir = get_dataset_and_path(path)
 	data = mldata.parse_c45(file_base=file_base, rootdir=root_dir)
@@ -20,6 +21,10 @@ def p2_main(
 	predictions, labels = crossval.cross_validate(
 		learner=learner, data=data, n_folds=n_folds, save_as=save_as
 	)
+	adjustments = None
+	if is_experiment:
+		adjustments = [n for _, n in predictions]
+		predictions = [p for p, _ in predictions]
 	accuracies = []
 	precisions = []
 	recalls = []
@@ -45,22 +50,43 @@ def p2_main(
 	})
 	all_preds = tuple(itertools.chain.from_iterable(predictions))
 	all_labels = tuple(itertools.chain.from_iterable(labels))
-	auc, best_thresh = mlutil.compute_roc(scores=all_preds, truths=all_labels)
-	results.update({
-		'auc': auc,
-		'best_threshold': best_thresh
-	})
-	if print_results:
-		print_p2_results(
-			mean_accuracy=round(results['mean_accuracy'], 4),
-			sd_accuracy=round(results['sd_accuracy'], 4),
-			mean_precision=round(results['mean_precision'], 4),
-			sd_precision=round(results['sd_precision'], 4),
-			mean_recall=round(results['mean_recall'], 4),
-			sd_recall=round(results['sd_recall'], 4),
-			mean_roc=round(auc, 4),
-			best_roc_threshold=round(best_thresh, 4)
+	if not is_experiment:
+		auc, best_thresh = mlutil.compute_roc(
+			scores=all_preds, truths=all_labels
 		)
+		results.update({
+			'auc': auc,
+			'best_threshold': best_thresh
+		})
+	if is_experiment:
+		results.update({
+			'mean_adjustments': statistics.mean(adjustments),
+			'sd_adjustments': statistics.stdev(adjustments)
+			if n_folds > 1 else 0
+		})
+	if print_results:
+		if is_experiment:
+			print_p2_results(
+				mean_accuracy=round(results['mean_accuracy'], 4),
+				sd_accuracy=round(results['sd_accuracy'], 4),
+				mean_precision=round(results['mean_precision'], 4),
+				sd_precision=round(results['sd_precision'], 4),
+				mean_recall=round(results['mean_recall'], 4),
+				sd_recall=round(results['sd_recall'], 4),
+				mean_adjustments= round(results['mean_adjustments'], 4),
+				sd_adjustments=round(results['sd_adjustments'], 4)
+			)
+		else:
+			print_p2_results(
+				mean_accuracy=round(results['mean_accuracy'], 4),
+				sd_accuracy=round(results['sd_accuracy'], 4),
+				mean_precision=round(results['mean_precision'], 4),
+				sd_precision=round(results['sd_precision'], 4),
+				mean_recall=round(results['mean_recall'], 4),
+				sd_recall=round(results['sd_recall'], 4),
+				mean_roc=round(auc, 4),
+				best_roc_threshold=round(best_thresh, 4)
+			)
 	return results
 
 
@@ -89,12 +115,22 @@ def print_p2_results(
 		mean_recall: float = None,
 		sd_recall: float = None,
 		mean_roc: float = None,
-		best_roc_threshold: float = None):
-	print(f'Accuracy: {mean_accuracy} {sd_accuracy}')
-	print(f'Precision: {mean_precision} {sd_precision}')
-	print(f'Recall: {mean_recall} {sd_recall}')
-	print(f'Area under ROC: {mean_roc}')
-	print(f'Best threshold: {best_roc_threshold}')
+		best_roc_threshold: float = None,
+		mean_adjustments: float = None,
+		sd_adjustments: float = None):
+	if mean_accuracy is not None and sd_accuracy is not None:
+		print(f'Accuracy: {mean_accuracy} {sd_accuracy}')
+	if mean_precision is not None and sd_precision is not None:
+		print(f'Precision: {mean_precision} {sd_precision}')
+	if mean_recall is not None and sd_recall is not None:
+		print(f'Recall: {mean_recall} {sd_recall}')
+	if mean_roc is not None:
+		print(f'Area under ROC: {mean_roc}')
+	if best_roc_threshold is not None:
+		print(f'Best threshold: {best_roc_threshold}')
+	if mean_adjustments is not None and sd_adjustments is not None:
+		print(f'Adjustments: {mean_adjustments} {sd_adjustments}')
+
 
 
 def get_dataset_and_path(path: str):
