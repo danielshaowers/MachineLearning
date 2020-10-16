@@ -23,7 +23,6 @@ class LogisticRegression(model.Model):
 		self.cost = cost
 		self.iterations = iterations
 		self.step_size = step_size
-		self.types = None
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -31,10 +30,10 @@ class LogisticRegression(model.Model):
 		iterations = f'iterations={self.iterations}'
 		return f'{class_name}({cost}, {iterations})'
 
-	def preprocess(self, data: mldata.ExampleSet):
+	@staticmethod
+	def preprocess(data: mldata.ExampleSet):
 		# data = preprocess.standardize(data)
 		np_data, f_types = mlutil.convert_to_numpy(data)
-		self.types = f_types
 		np_data = mlutil.quantify_nominals(np_data, f_types)
 		np_data = np.asarray(np_data, dtype='float64')
 		np_data = preprocess.normalize(np_data, f_types)
@@ -46,8 +45,6 @@ class LogisticRegression(model.Model):
 		np_data = self.preprocess(data)
 		# randomly initialize weights for each feature
 		weights = np.random.rand(len(np_data))
-		# randomly initialize biases? should i even incorporate biases
-		bias = np.random.rand(len(np_data), 1)
 		self.weights = self.gradient_descent(
 			np_data, truths, weights, step_size=self.step_size, skip=set()
 		)
@@ -64,9 +61,13 @@ class LogisticRegression(model.Model):
 	def conditional(x, y):
 		# calculate log likelihood to maintain convexity instead of squared
 		# loss
-		return -y * np.math.log(x) - (1 - y) * np.math.log(1 - x)
+		return -y * np.log(x) - (1 - y) * np.log(1 - x)
 
 	def predict(self, data: mldata.ExampleSet):
+		if len(data) == 0:
+			raise ValueError('There are no examples to predict!')
+		if len(self.weights) == 0:
+			raise AttributeError('Train the model first!')
 		# guesses = np.zeros(len(ndata[1]), 1) # use sigmoid to find guesses
 		# guesses[np.where(sigmoid >= 0.5)] = 1 # truth guess when >= 0.5
 		np_data = self.preprocess(data)
@@ -120,7 +121,8 @@ class LogisticRegression(model.Model):
 			# feature. so we loop over all features and store results as an
 			# array
 			gradient = np.zeros(len(ndata))
-			sig = self.sigmoid(np.sum(weighted_feats, axis=1),bias=0) - truths  # -(np.sum(weights) / 2))
+			# -(np.sum(weights) / 2))
+			sig = self.sigmoid(np.sum(weighted_feats, axis=1), bias=0) - truths
 			res = np.zeros(len(ndata) - len(skip))
 			for j in (jj for jj in range(len(ndata)) if jj not in skip):  #
 				res[counter] = np.sum(sig * ndata[j])
@@ -172,7 +174,7 @@ def main(path: str, skip_cv: bool, cost: float, iterations=1000):
 	learner = LogisticRegression(
 		cost=cost, iterations=iterations, step_size=0.5
 	)
-	mainutil.p2_main(path, learner, skip_cv)
+	mainutil.p2_main(path=path, learner=learner, skip_cv=skip_cv)
 
 
 def command_line_main():
