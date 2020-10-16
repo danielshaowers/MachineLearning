@@ -314,11 +314,11 @@ def compute_roc(scores, truths):
 	end_y = 1
 	coordinates[len(coordinates) - 1] = [0, 0]  # edge case
 	# todo: compare to built in function
-	for i, coord in enumerate(coordinates):
+	for coord in coordinates:
 		start_x = coord[0]
 		start_y = coord[1]
 		# get area of trapezoidal region
-		auc = auc + (end_x - start_x) * ((start_y + end_y) / 2)
+		auc += (end_x - start_x) * (start_y + end_y) / 2
 		end_x = start_x
 		end_y = start_y
 	return auc, best_point[1]

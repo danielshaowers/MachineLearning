@@ -82,14 +82,14 @@ def base_arg_parser():
 
 
 def print_p2_results(
-		mean_accuracy: float,
-		sd_accuracy: float,
-		mean_precision: float,
-		sd_precision: float,
-		mean_recall: float,
-		sd_recall: float,
-		mean_roc: float,
-		best_roc_threshold: float):
+		mean_accuracy: float = None,
+		sd_accuracy: float = None,
+		mean_precision: float = None,
+		sd_precision: float = None,
+		mean_recall: float = None,
+		sd_recall: float = None,
+		mean_roc: float = None,
+		best_roc_threshold: float = None):
 	print(f'Accuracy: {mean_accuracy} {sd_accuracy}')
 	print(f'Precision: {mean_precision} {sd_precision}')
 	print(f'Recall: {mean_recall} {sd_recall}')
