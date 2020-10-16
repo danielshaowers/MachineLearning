@@ -226,7 +226,8 @@ class NaiveBayes(model.Model):
 	@staticmethod
 	def load(file: str):
 		def parse_key(s: str):
-			if len(parts := s.split('_')) == 1:
+			parts = s.split('_')
+			if len(parts) == 1:
 				parsed = bool(util.strtobool(parts[0]))
 			else:
 				value = int(parts[0]) if parts[0].isnumeric() else parts[0]
@@ -291,10 +292,5 @@ def command_line_main():
 
 
 if __name__ == '__main__':
-	# main(path='..\\voting', skip_cv=False, n_bins=2, m=0)
-	# command_line_main()
-	voting = mldata.parse_c45('voting', '..')
-	nb = NaiveBayes()
-	nb.train(voting)
-	nb.save('test_save.txt')
-	nb.load('test_save.txt')
+	# main(path='..\\voting', skip_cv=False, n_bins=2, m=2)
+	command_line_main()
