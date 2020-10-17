@@ -156,12 +156,13 @@ def command_line_main():
 	parser.add_argument(
 		'--cost',
 		type=float,
-		help='Cost term for negative conditional log likelihood'
+		help='Cost term for negative conditional log likelihood',
+		required=True
 	)
 	args = parser.parse_args()
 	main(path=args.path, skip_cv=args.skip_cv, cost=args.cost)
 
 
 if __name__ == "__main__":
-	# command_line_main()
-	main(path='..\\voting', skip_cv=True, cost=0.1, iterations=1000)
+	command_line_main()
+	# main(path='..\\voting', skip_cv=True, cost=0.1, iterations=1000)
