@@ -35,24 +35,26 @@ def train_test(
     return pred_labels, accuracy, size, first_node, depth
 
 
-def main(dataset, data_path, use_cv, max_depth, use_info_gain: int):
+def main(dataset, data_path, use_cv, max_depth, use_info_gain: int, weights = None):
     # only relevant for when we're running the experiment
     partition_count = [3, 5, 7, 10] if use_info_gain < 0 else [1]
     data = mldata.parse_c45(dataset, data_path)
-    data = mldata.ExampleSet([e for i,e in enumerate(data) if i < 1000]) 
+    #data = mldata.ExampleSet([e for i,e in enumerate(data) if i < 1000])
     if use_info_gain >= 1:
         split_criteria = metrics.info_gain
     elif use_info_gain == 0:
         split_criteria = metrics.gain_ratio
     else:
         split_criteria = metrics.stochastic_information_gain
-
     for z in partition_count:  # run the experiment
         if len(partition_count) > 1:
             print(f'\nrunning experiment with {z} partitions')
         learner = algorithm.ID3(
-            max_depth=max_depth, split_function=split_criteria, partitions=z)
-        run(use_cv, data, learner)
+            max_depth=max_depth, split_function=split_criteria, partitions=z, boost_weights=weights)
+        if weights != None:
+            return learner, data
+        else:
+            run(use_cv, data, learner)
 
 
 def run(use_cv, data, learner):
@@ -119,7 +121,7 @@ if __name__ == "__main__":
         print('<use_info_gain> \t Use information gain as the split')
         print('\t\t\t\t\t criteria. Otherwise, use gain ratio')
         data_path = '..'
-        dataset = 'spam'
+        dataset = 'voting'
         use_cv = True
         max_depth = 1
         use_info_gain = 0

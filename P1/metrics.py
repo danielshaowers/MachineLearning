@@ -70,10 +70,10 @@ def stochastic_information_gain(
 		#	ig[i] = info_gain(subset_labels, subset_feats)
 		# else:
 		try:
-			ig.append(gain_ratio(subset_labels, event_tests, subset_feats, given_tests, 1))
+			ig.append(info_gain(subset_labels, event_tests, subset_feats, given_tests, 1))
+			return statistics.mean(ig)
 		except:
-			given
-	return statistics.mean(ig)
+			return 0
 
 
 def find_indices(list, condition):
@@ -85,7 +85,12 @@ def gain_ratio(
 		event_tests: Collection[Callable],
 		given: Collection,
 		given_tests: Collection[Callable], ignoreme) -> float:
-	return info_gain(event, event_tests, given, given_tests, ignoreme) / sum([entropy(probability(event, e)) for e in event_tests])
+	#event_test = tuple(event_tests)
+	infogain, h_y = info_gain(event, event_tests, given, given_tests, ignoreme)
+	try:
+		return infogain/ h_y
+	except:
+		return 0
 
 
 	"""Computes the gain ratio over an event and given random variables.
@@ -139,7 +144,7 @@ def info_gain(
 	cond_entropy = conditional_entropy(event, event_tests, given, given_tests)
 	event_entropy = sum(entropy(probability(event, e)) for e in event_tests)
 	gain = event_entropy - cond_entropy
-	return 0 if math.isnan(gain) else gain
+	return 0 if math.isnan(gain) else gain, event_entropy
 
 
 def conditional_entropy(

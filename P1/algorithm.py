@@ -1,14 +1,14 @@
 import enum
 from abc import ABC, abstractmethod
+from random import random
 from typing import Any, Callable, NoReturn, Tuple
-
 import numpy as np
-
+import math
 import metrics
 import mldata
-import mlutil
+import P2.mlutil as mlutil
 import node
-
+from functools import reduce
 
 class Model(ABC):
 	"""An abstract machine learning model.
@@ -43,7 +43,8 @@ class ID3(Model):
 			self,
 			max_depth: int = 1,
 			split_function: Callable = None,
-			partitions: int = 1):
+			partitions: int = 1,
+			boost_weights= None):
 		"""
 		Args:
 			max_depth: Maximum depth of the decision tree.
@@ -58,9 +59,11 @@ class ID3(Model):
 			self.split_function = split_function
 		self.model_metrics = dict()
 		self.model = None
+		self.boost_weights = boost_weights
 		super(ID3, self).__init__()
 
 	def train(self, data: mldata.ExampleSet) -> NoReturn:
+		import numpy as np
 		"""Trains the decision tree on the data using the ID3 algorithm.
 
 		Args:
@@ -69,6 +72,11 @@ class ID3(Model):
 		Returns:
 			None. The trained model is stored in the ID3 object.
 		"""
+
+		if self.boost_weights == None:
+			self.boost_weights = np.ones(len(data))
+			#self.boost_weights = [round(random() + 1) for f in range(len(data))]
+		data = mlutil.boost_data(data, self.boost_weights)
 		self.model = self.id3(data)
 		result = self.model.main_leaf_vals()
 		self._get_model_metrics()
@@ -152,7 +160,8 @@ class ID3(Model):
 		feature_exs = mlutil.get_feature_examples(data)
 		split_tests = mlutil.create_all_split_tests(data)
 		l_type = mlutil.get_label_info(data).type
-		label_tests = mlutil.create_split_tests(labels, l_type, as_tuple=True)
+		label_tests = mlutil.create_split_tests(labels, l_type, as_tuple=False)
+
 		# finds the information gain or gain ratio of each test
 		split_values = [[
 			self.split_function(labels, label_tests, f, [t], self.partitions)
@@ -177,6 +186,8 @@ class ID3(Model):
 
 	def _at_max_depth(self, depth: int) -> bool:
 		return False if self.max_depth < 1 else depth >= self.max_depth
+
+
 
 
 class Test:

@@ -45,5 +45,5 @@ class Node:
 		if self.has_right_child():
 			tree_size += self.right.get_tree_size(tree_size)
 		if self.is_leaf():
-			return -1
+			return 1
 		return tree_size + 1
