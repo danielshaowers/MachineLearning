@@ -4,13 +4,15 @@ from typing import NoReturn
 
 import numpy as np
 
+import adaboost
 import mainutil
 import mldata
-import mlutil
+import P2.mlutil as mlutil
 import model
 import preprocess
 
-
+# only change made was we changed the weights to reflect the weight of each example.
+# so if an example has feature val of 0.7 and example weight is 0.2, then its weight becomes 0.14
 class LogisticRegression(model.Model):
 
 	def __init__(
@@ -18,12 +20,14 @@ class LogisticRegression(model.Model):
 			cost: float = 0.1,
 			iterations: int = 1000,
 			step_size: float = 0.5,
-			weights=None):
+			weights=None,
+			boost_weights = None):
 		super(LogisticRegression, self).__init__()
 		self.weights = weights
 		self.cost = cost
 		self.iterations = iterations
 		self.step_size = step_size
+		self.boost_weights = boost_weights
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -31,8 +35,8 @@ class LogisticRegression(model.Model):
 		iterations = f'iterations={self.iterations}'
 		return f'{class_name}({cost}, {iterations})'
 
-	@staticmethod
-	def preprocess(data: mldata.ExampleSet):
+
+	def preprocess(self, data: mldata.ExampleSet):
 		np_data, f_types = mlutil.convert_to_numpy(data)
 		np_data = mlutil.quantify_nominals(np_data, f_types)
 		np_data = np.asarray(np_data, dtype='float64')
@@ -41,15 +45,16 @@ class LogisticRegression(model.Model):
 		return np_data
 
 	def train(self, data: mldata.ExampleSet):
+		if self.boost_weights == None:
+			self.boost_weights = np.ones(len(data))
 		truths = np.array(mlutil.get_labels(data))
 		# perform pre-processing of data: quantify nominal features
 		np_data = self.preprocess(data)
 		self.weights = self.gradient_descent(np_data, truths)
 
-	# okay now the weights should be finalized
 
+	# okay now the weights should be finalized
 	@staticmethod
-	# numerically stable sigmoid to prevent overflow errors
 	def sigmoid(x, bias=0):
 		z = np.exp(-x - bias)
 		return 1 / (1 + z)
@@ -78,8 +83,8 @@ class LogisticRegression(model.Model):
 		pos_sigmoids = sigmoids[poslabel_idx]
 		neg_sigmoids = sigmoids[neglabel_idx]
 		squared_norm = np.square(np.linalg.norm(weights))
-		pos_log_sigmoids = sum(-np.log(pos_sigmoids))
-		neg_log_sigmoids = sum(-np.log(1 - neg_sigmoids))
+		pos_log_sigmoids = adaboost.wsum(-np.log(pos_sigmoids), self.boost_weights[poslabel_idx])
+		neg_log_sigmoids = adaboost.wsum(-np.log(1 - neg_sigmoids), self.boost_weights[neglabel_idx])
 		neg_log_cond_like = pos_log_sigmoids + neg_log_sigmoids
 		conditional_ll = 0.5 * squared_norm + self.cost * neg_log_cond_like
 		return conditional_ll
@@ -100,6 +105,7 @@ class LogisticRegression(model.Model):
 			iterations += 1
 			weighted = [weights[i] * f for i, f in enumerate(data)]
 			weighted = np.array(weighted).T
+
 			# theta^T*x: multiply all examples for each feature value by its
 			# corresponding weight
 			# the calculations themselves give us ONE gradient for one
@@ -108,12 +114,12 @@ class LogisticRegression(model.Model):
 			gradient = np.zeros(len(data))
 			sig = self.sigmoid(np.sum(weighted, axis=1), bias=0) - truths
 			results = np.zeros(len(data) - len(skip))
-			features_idx = (f for f in range(len(data)) if f not in skip)
+			features_idx = [f for f in range(len(data)) if f not in skip]
+			total_boosted_weight = sum(self.boost_weights)
 			for i, f in enumerate(features_idx):
-				results[i] = np.sum(sig * data[f])
+				results[i] = np.sum(sig * data[f] * self.boost_weights)
 				# calculate the gradient wrt each feature
-				# TODO (1 / len(data[0])) only needs to be computed once
-				gradient[f] = (1 / len(data[0])) * (
+				gradient[f] = (1 / total_boosted_weight) * (
 						results[i] + self.cost * weights[f])
 			# find which feature gradients we can stop
 			finished = np.argwhere(abs(gradient) < epsilon)
@@ -164,5 +170,5 @@ def command_line_main():
 
 
 if __name__ == "__main__":
-	command_line_main()
-	# main(path='..\\voting', skip_cv=True, cost=0.1, iterations=1000)
+	#command_line_main()
+	 main(path='..\\voting', skip_cv=True, cost=0.1, iterations=1000)

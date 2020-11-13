@@ -8,7 +8,8 @@ from typing import Any, Callable, Collection, Dict, Generator, Iterable, \
 import numpy as np
 
 import mldata
-
+import math
+from functools import reduce
 
 def binarize_feature(
 		values: Iterable,
@@ -257,6 +258,50 @@ def get_majority_label(data: mldata.ExampleSet):
 def print_label_ratio(data: mldata.ExampleSet):
 	print(collections.Counter(get_labels(data)).most_common())
 
+def get_features(
+		data: mldata.ExampleSet,
+		example_index: int = None,
+		feature_index: int = None,
+		as_tuple: bool = True) -> Union[Tuple, Generator, Any]:
+	"""Retrieves the values of one or more examples and or more features.
+
+	If neither index is specified, then the values of all of the features,
+	with the exception of the first and  last features which are assumed to
+	be the identifier and class label, for all of the examples are returned.
+
+	If only the example_index is specified, then the values of all of the
+	feature corresponding example are returned, with the exception of the
+	first and  last features which are assumed to be the identifier and class
+	label.
+
+	If only the feature index is specified, then the value of corresponding
+	feature is provided for all examples.
+
+	Args:
+		data: ExampleSet in which to retrieve feature values.
+		example_index: Index of the example of interest.
+		feature_index: Index of the feature of interest.
+		as_tuple: True will return the iterable as a tuple, and as a
+			generator otherwise.
+
+	Returns:
+		A tuple or generator if neither or only one of the indices are
+		provided; otherwise, a single feature value.
+	"""
+	if example_index is None:
+		if feature_index is None:
+			features = (example[1:-1] for example in data)
+		else:
+			features = (example[feature_index] for example in data)
+		features = tuple(features) if as_tuple else features
+	else:
+		if feature_index is None:
+			features = data[example_index][1:-1]
+			features = tuple(features) if as_tuple else features
+		else:
+			features = data[example_index][feature_index]
+	return features
+
 
 def get_feature_index(data: mldata.ExampleSet, feature: mldata.Feature) -> int:
 	return data.schema.index(feature)
@@ -353,3 +398,25 @@ def compute_tf_fp(predicted_labels: Sequence, truths: Sequence):
 	fp = sum(1 for e in neg_truths if predicted_labels[e] == 1)
 	fn = sum(1 for e in pos_truths if predicted_labels[e] == 0)
 	return tp, tn, fp, fn
+
+# euclid's algorithm
+def get_gcd(a, b):
+	#if math.isclose(b,0):
+	if b < 0.2:
+		return a
+	return get_gcd(b, a % b)
+
+def gcdarr(arr):
+	return reduce(get_gcd, arr)
+
+def correctratios(arr):
+	arrgcd = gcdarr(arr)
+	return [round(a / arrgcd) for a in arr]
+
+def boost_data(data, weights):
+	ints = correctratios(weights)
+	replicated_data = []
+	for i, count in enumerate(ints):
+		replicated_data.extend([data[i]] * count)
+	eset = mldata.ExampleSet(d for d in replicated_data)
+	return eset

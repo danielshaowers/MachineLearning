@@ -3,9 +3,9 @@ import random
 from collections import defaultdict
 from typing import Sequence, Tuple
 
-import mldata
-import mlutil
-import model
+import P2.mldata as mldata
+import P2.mlutil as mlutil
+import P2.model as model
 
 
 def cross_validate(
@@ -47,7 +47,6 @@ def cross_validate(
 		fold_predictions.append(learner.predict(test))
 		fold_test_labels.append(mlutil.get_labels(test))
 	return tuple(fold_predictions), tuple(fold_test_labels)
-
 
 def get_train_test_split(folds: Sequence, test_fold_ind: int) -> Tuple:
 	"""Creates the training and test sets from dataset folds.

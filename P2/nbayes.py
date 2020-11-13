@@ -11,9 +11,9 @@ import jsonpickle
 import numpy as np
 
 import mainutil
-import metrics
+import P2.metrics as metrics
 import mldata
-import mlutil
+import P2.mlutil as mlutil
 import model
 
 
@@ -40,7 +40,8 @@ class NaiveBayes(model.Model):
 			n_bins: int = 2,
 			laplace_m: Union[int, float] = 0,
 			binners: Mapping[mldata.Feature, Callable[[Any], int]] = None,
-			params: Mapping[mldata.Feature, Any] = None):
+			params: Mapping[mldata.Feature, Any] = None,
+			boost_weights = None):
 		super(NaiveBayes, self).__init__()
 		if n_bins < 2:
 			raise ValueError(
@@ -51,6 +52,7 @@ class NaiveBayes(model.Model):
 		self.laplace_m = laplace_m
 		self.binners = dict() if binners is None else binners
 		self.params = dict() if params is None else params
+		self.boost_weights = boost_weights
 
 	def __repr__(self):
 		class_name = f'{self.__class__.__name__}'
@@ -114,8 +116,12 @@ class NaiveBayes(model.Model):
 		Returns:
 			None. Model parameters are stored in the params attribute.
 		"""
+		if self.boost_weights == None:
+			self.boost_weights = np.ones(len(data))
+		data = mlutil.boost_data(data, self.boost_weights)
 		self.binners = self._preprocess(data)
 		self.params = self._naive_bayes(data)
+
 
 	def _naive_bayes(
 			self,

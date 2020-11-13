@@ -2,10 +2,10 @@ import argparse
 import itertools
 import statistics
 
-import crossval
-import mldata
-import mlutil
-import model
+import P2.crossval as crossval
+import P2.mldata as mldata
+import P2.mlutil as mlutil
+import P2.model as model
 
 
 def p2_main(
@@ -22,6 +22,8 @@ def p2_main(
 		learner=learner, data=data, n_folds=n_folds, save_as=save_as
 	)
 	adjustments = None
+	get_results(is_experiment=is_experiment, predictions=predictions, labels=labels, n_folds=n_folds, print_results=print_results)
+def get_results(is_experiment, predictions, labels, n_folds, print_results):
 	if is_experiment:
 		adjustments = [n for _, n in predictions]
 		predictions = [p for p, _ in predictions]
